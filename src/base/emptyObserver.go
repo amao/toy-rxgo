@@ -8,22 +8,22 @@ type EmptyObserver struct {
 }
 
 func NewEmptyObserver() EmptyObserver {
-	baseSubscriber := EmptyObserver{}
+	baseSubscriber := new(EmptyObserver)
 	baseSubscriber.closed = true
 	baseSubscriber.next = func(value interface{}) {}
 	baseSubscriber.error_ = func(e error) {}
 	baseSubscriber.complete = func() {}
-	return baseSubscriber
+	return *baseSubscriber
 }
 
-func (eo EmptyObserver) Next(value interface{}) {
+func (eo *EmptyObserver) Next(value interface{}) {
 	eo.next(value)
 }
 
-func (eo EmptyObserver) Error(e error) {
+func (eo *EmptyObserver) Error(e error) {
 	eo.error_(e)
 }
 
-func (eo EmptyObserver) Complete() {
+func (eo *EmptyObserver) Complete() {
 	eo.complete()
 }

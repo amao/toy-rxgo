@@ -6,21 +6,23 @@ import (
 	"github.com/amao/toy-rxgo/src/base"
 )
 
-func Interval(period int) base.Observable {
-	return base.NewObservable(func(observer base.Observer) base.Unsubscribable {
-		i := 0
-		observer.Next(i)
-		i++
+func Interval(period int) *base.Observable {
+	result := base.NewObservable(func(observer base.Observer) base.Unsubscribable {
 		t := time.NewTicker(time.Duration(period) * time.Millisecond)
 		go func() {
+			i := 0
 			for range t.C {
 				observer.Next(i)
 				i++
 			}
 		}()
 
-		return base.NewSubscription(func() {
+		sp := base.NewSubscription(func() {
 			t.Stop()
 		})
+
+		return &sp
 	})
+
+	return &result
 }

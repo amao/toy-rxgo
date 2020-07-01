@@ -11,17 +11,17 @@ type Subscription struct {
 }
 
 func NewSubscription(args ...func()) Subscription {
-	newInstance := Subscription{}
+	newInstance := new(Subscription)
 	if len(args) != 0 {
 		newInstance.unsubscribe = args[0]
 		newInstance.Closed = false
 	}
-	return newInstance
+	return *newInstance
 }
 
-func (s Subscription) Add(teardown Unsubscribable) Unsubscribable {
+func (s *Subscription) Add(teardown Unsubscribable) Unsubscribable {
 	var subscriptionLike Unsubscribable
-	if subscription, ok := teardown.(Subscription); ok {
+	if subscription, ok := teardown.(*Subscription); ok {
 		subscriptionLike = subscription
 		if reflect.DeepEqual(subscription, s) || subscription.Closed {
 			return subscription
@@ -31,7 +31,7 @@ func (s Subscription) Add(teardown Unsubscribable) Unsubscribable {
 		}
 	}
 
-	if subscriber, ok := teardown.(Subscriber); ok {
+	if subscriber, ok := teardown.(*Subscriber); ok {
 		subscriptionLike = subscriber
 		if reflect.DeepEqual(subscriber, s) || subscriber.Subscription.Closed {
 			return subscriber
@@ -41,17 +41,16 @@ func (s Subscription) Add(teardown Unsubscribable) Unsubscribable {
 		}
 	}
 
-	subscriptions := s.subscriptions
-	if subscriptions == nil {
+	if s.subscriptions == nil {
 		s.subscriptions = []Unsubscribable{subscriptionLike}
 	} else {
-		subscriptions = append(subscriptions, subscriptionLike)
+		s.subscriptions = append(s.subscriptions, subscriptionLike)
 	}
 
 	return subscriptionLike
 }
 
-func (s Subscription) Remove(subscription Subscription) {
+func (s *Subscription) Remove(subscription Subscription) {
 	subscriptions := s.subscriptions
 
 	if subscriptions != nil {
@@ -75,7 +74,7 @@ func (s Subscription) Remove(subscription Subscription) {
 	}
 }
 
-func (s Subscription) Unsubscribe() {
+func (s *Subscription) Unsubscribe() {
 	if s.Closed {
 		return
 	}

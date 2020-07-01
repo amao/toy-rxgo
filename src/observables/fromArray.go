@@ -8,6 +8,7 @@ func FromArray(array []int) base.Observable {
 			observer.Next(value)
 		}
 		observer.Complete()
-		return base.NewSubscription()
+		sp := base.NewSubscription()
+		return &sp
 	})
 }

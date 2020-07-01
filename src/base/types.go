@@ -14,9 +14,19 @@ type Observer interface {
 }
 
 type Operator interface {
-	Call(subscriber Subscriber, source Observable) Unsubscribable
+	Call(subscriber *Subscriber, source Observable) Unsubscribable
 }
 
 type Subscribable interface {
 	Subscribe(func(interface{}), func(error), func()) Unsubscribable
+}
+
+type TimestampProviderAndSchedulerLike interface {
+	Now() float64
+	Schedule(work func(scheduler SchedulerAction, state interface{}), delay float64, state interface{}) Unsubscribable
+}
+
+type SchedulerAction interface {
+	Schedule(state interface{}, delay float64) Unsubscribable
+	Unsubscribable
 }

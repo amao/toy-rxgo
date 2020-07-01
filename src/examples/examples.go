@@ -15,12 +15,11 @@ func main() {
 			fmt.Println(value)
 		},
 	)
-
 	subscription := observables.Interval(1000).Pipe(
 		operators.Map(func(x interface{}) interface{} { return x.(int) * 10 }),
 		operators.Filter(func(x interface{}) bool { return x.(int) < 60 }),
 		operators.SwitchMap(func(x interface{}) base.Subscribable {
-			return observables.Of(fmt.Sprintf("%d switchmap to %d", x, x.(int)*10))
+			return observables.Of(1000)
 		}),
 	).Subscribe(
 		subscriber.Next,
@@ -28,10 +27,7 @@ func main() {
 		subscriber.Complete,
 	)
 
-	for {
-		time.Sleep(10 * time.Second)
-		break
-	}
+	time.Sleep(3001 * time.Millisecond)
 
 	subscription.Unsubscribe()
 

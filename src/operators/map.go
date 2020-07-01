@@ -56,8 +56,8 @@ func newMapOperator(project func(interface{}) interface{}) mapOperator {
 	return newInstance
 }
 
-func (m mapOperator) Call(subscriber base.Subscriber, source base.Observable) base.Unsubscribable {
-	nms := newMapSubscriber(subscriber, m.project)
+func (m mapOperator) Call(subscriber *base.Subscriber, source base.Observable) base.Unsubscribable {
+	nms := newMapSubscriber(*subscriber, m.project)
 	return source.Subscribe(nms.Next, nms.Error, nms.Complete)
 }
 

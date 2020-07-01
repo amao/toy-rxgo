@@ -58,8 +58,8 @@ func newFilterOperator(predicate func(interface{}) bool) filterOperator {
 	return newInstance
 }
 
-func (m filterOperator) Call(subscriber base.Subscriber, source base.Observable) base.Unsubscribable {
-	nfs := newFilterSubscriber(subscriber, m.predicate)
+func (m filterOperator) Call(subscriber *base.Subscriber, source base.Observable) base.Unsubscribable {
+	nfs := newFilterSubscriber(*subscriber, m.predicate)
 	return source.Subscribe(nfs.Next, nfs.Error, nfs.Complete)
 }
 

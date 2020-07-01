@@ -2,91 +2,66 @@ package operators
 
 import (
 	"github.com/amao/toy-rxgo/src/base"
-	"github.com/amao/toy-rxgo/src/util"
 )
 
 type switchMapSubscriber struct {
-	outerSubscriber   base.OuterSubscriber
-	innerSubscription *base.Subscriber
-	subscriber        base.Subscriber
-	project           func(value interface{}) base.Subscribable
+	parent            base.Subscriber
+	fn                func(interface{}) base.Subscribable
+	innerSubscription base.Unsubscribable
 }
 
-func newSwitchMapSubscriber(destination base.Subscriber, project func(interface{}) base.Subscribable) switchMapSubscriber {
-	newInstance := switchMapSubscriber{}
-	newInstance.subscriber = base.NewSubscriber(destination.Next, destination.Error, destination.Complete)
-	newInstance.outerSubscriber = base.NewOuterSubscriber(destination)
-	newInstance.project = project
-	return newInstance
+func newSwitchMapSubscriber(subscriber *base.Subscriber, fn func(interface{}) base.Subscribable) switchMapSubscriber {
+	newInstance := new(switchMapSubscriber)
+	newInstance.parent = base.NewSubscriber(subscriber.Next, subscriber.Error, subscriber.Complete)
+	newInstance.fn = fn
+	sp := base.NewSubscription()
+	newInstance.innerSubscription = &sp
+	subscriber.Subscription.Add(newInstance.innerSubscription)
+	return *newInstance
 }
 
-func (s switchMapSubscriber) innerSub(result base.Subscribable, value interface{}) {
-	innerSubscription := s.innerSubscription
-	if innerSubscription != nil {
-		innerSubscription.Unsubscribe()
+func (s *switchMapSubscriber) Next(value interface{}) {
+	innerObservable := s.fn(value)
+
+	if s.innerSubscription != nil {
+		s.innerSubscription.Unsubscribe()
 	}
 
-	innerSubscriber := base.NewInnerSubscriber(s.outerSubscriber, value)
-	destination := s.subscriber.Subscription
-	destination.Add(innerSubscriber)
-	in := util.SubscribeToResult(s.outerSubscriber, result, value, innerSubscriber).(base.Subscriber)
-	s.innerSubscription = &in
-}
-
-func (s switchMapSubscriber) Next(value interface{}) {
-	result := s.project(value)
-
-	s.innerSub(result, value)
+	s.innerSubscription = innerObservable.Subscribe(
+		func(value interface{}) {
+			s.parent.Destination.Next(value)
+		},
+		nil,
+		nil,
+	)
 }
 
 func (s switchMapSubscriber) Error(err error) {
-	s.subscriber.Error(err)
+	s.parent.Error(err)
 }
 
 func (s switchMapSubscriber) Complete() {
-	innerSubscription := s.innerSubscription
-	if innerSubscription == nil || innerSubscription.Subscription.Closed {
-		s.subscriber.Complete()
-	}
-	s.Unsubscribe()
-}
-
-func (s switchMapSubscriber) Unsubscribe() {
-	s.innerSubscription = nil
-}
-
-func (s switchMapSubscriber) notifyComplete(innerSub base.Subscription) {
-	destination := s.subscriber.Subscription
-	destination.Remove(innerSub)
-	s.innerSubscription = nil
-	if s.subscriber.IsStopped {
-		s.subscriber.Complete()
-	}
-}
-
-func (s switchMapSubscriber) notifyNext(innerValue interface{}) {
-	s.subscriber.Destination.Next(innerValue)
+	s.parent.Complete()
 }
 
 type switchMapOperator struct {
-	Project func(interface{}) base.Subscribable
+	project func(interface{}) base.Subscribable
 }
 
 func newSwitchMapOperator(project func(interface{}) base.Subscribable) switchMapOperator {
-	newInstance := switchMapOperator{}
-	newInstance.Project = project
-	return newInstance
+	newInstance := new(switchMapOperator)
+	newInstance.project = project
+	return *newInstance
 }
 
-func (m switchMapOperator) Call(subscriber base.Subscriber, source base.Observable) base.Unsubscribable {
-	nsms := newSwitchMapSubscriber(subscriber, m.Project)
+func (m *switchMapOperator) Call(subscriber *base.Subscriber, source base.Observable) base.Unsubscribable {
+	nsms := newSwitchMapSubscriber(subscriber, m.project)
 	return source.Subscribe(nsms.Next, nsms.Error, nsms.Complete)
 }
 
-func SwitchMap(project func(value interface{}) base.Subscribable) base.OperatorFunction {
-	result := func(source base.Observable) base.Observable {
-		return source.Lift(newSwitchMapOperator(project))
+func SwitchMap(fn func(interface{}) base.Subscribable) base.OperatorFunction {
+	return func(source base.Observable) base.Observable {
+		op := newSwitchMapOperator(fn)
+		return source.Lift(&op)
 	}
-
-	return result
 }
