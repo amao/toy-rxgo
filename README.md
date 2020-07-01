@@ -18,3 +18,5 @@ Rx programming in Go
 - Tests
 - Corner cases
 - Operators
+- Code Comments
+- Scheduler
