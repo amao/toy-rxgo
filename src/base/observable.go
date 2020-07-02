@@ -27,7 +27,7 @@ func (o *Observable) Pipe(operations ...OperatorFunction) *Observable {
 	return &result
 }
 
-func (o *Observable) Lift(operator Operator) Observable {
+func (o *Observable) Lift(operator Operator) *Observable {
 	observable := new(Observable)
 	observable.subscribe = func(subscriber Observer) Unsubscribable {
 		if o.source != nil {
@@ -38,7 +38,7 @@ func (o *Observable) Lift(operator Operator) Observable {
 	}
 	observable.source = o
 	observable.operator = operator
-	return *observable
+	return observable
 }
 
 func (o *Observable) Subscribe(next func(interface{}), err func(err error), complete func()) Unsubscribable {
