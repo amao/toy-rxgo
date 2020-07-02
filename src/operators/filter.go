@@ -65,7 +65,8 @@ func (m filterOperator) Call(subscriber *base.Subscriber, source base.Observable
 
 func Filter(predicate func(interface{}) bool) base.OperatorFunction {
 	result := func(source base.Observable) base.Observable {
-		return source.Lift(newFilterOperator(predicate))
+		op := newFilterOperator(predicate)
+		return *source.Lift(&op)
 	}
 
 	return result

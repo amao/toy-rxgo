@@ -63,7 +63,8 @@ func (m mapOperator) Call(subscriber *base.Subscriber, source base.Observable) b
 
 func Map(project func(interface{}) interface{}) base.OperatorFunction {
 	result := func(source base.Observable) base.Observable {
-		return source.Lift(newMapOperator(project))
+		op := newMapOperator(project)
+		return *source.Lift(&op)
 	}
 
 	return result
