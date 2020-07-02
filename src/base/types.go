@@ -18,7 +18,7 @@ type Operator interface {
 }
 
 type Subscribable interface {
-	Subscribe(func(interface{}), func(error), func()) Unsubscribable
+	Subscribe(args ...interface{}) Unsubscribable
 }
 
 type TimestampProviderAndSchedulerLike interface {
