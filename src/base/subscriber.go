@@ -1,9 +1,9 @@
 package base
 
 type Subscriber struct {
-	Destination  Observer
-	Subscription *Subscription
-	IsStopped    bool
+	Destination Observer
+	*Subscription
+	IsStopped bool
 }
 
 func NewSubscriber(args ...interface{}) Subscriber {
