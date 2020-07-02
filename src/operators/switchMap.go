@@ -1,6 +1,8 @@
 package operators
 
 import (
+	"fmt"
+
 	"github.com/amao/toy-rxgo/src/base"
 )
 
@@ -8,10 +10,12 @@ type switchMapSubscriber struct {
 	parent            base.Subscriber
 	fn                func(interface{}) base.Subscribable
 	innerSubscription base.Unsubscribable
+	index             int
 }
 
 func newSwitchMapSubscriber(subscriber *base.Subscriber, fn func(interface{}) base.Subscribable) switchMapSubscriber {
 	newInstance := new(switchMapSubscriber)
+	newInstance.index = 1
 	newInstance.parent = base.NewSubscriber(subscriber.Next, subscriber.Error, subscriber.Complete)
 	newInstance.fn = fn
 	sp := base.NewSubscription()
@@ -22,6 +26,7 @@ func newSwitchMapSubscriber(subscriber *base.Subscriber, fn func(interface{}) ba
 
 func (s *switchMapSubscriber) Next(value interface{}) {
 	innerObservable := s.fn(value)
+	s.index++
 
 	if s.innerSubscription != nil {
 		s.innerSubscription.Unsubscribe()
@@ -29,19 +34,30 @@ func (s *switchMapSubscriber) Next(value interface{}) {
 
 	s.innerSubscription = innerObservable.Subscribe(
 		func(value interface{}) {
-			s.parent.Destination.Next(value)
+			s.parent.Next(value)
 		},
-		nil,
-		nil,
+		func(err error) {
+			s.parent.Error(err)
+		},
+		func() {
+			s.index--
+			if s.index <= 0 {
+				s.parent.Complete()
+			}
+		},
 	)
 }
 
-func (s switchMapSubscriber) Error(err error) {
+func (s *switchMapSubscriber) Error(err error) {
 	s.parent.Error(err)
 }
 
-func (s switchMapSubscriber) Complete() {
-	s.parent.Complete()
+func (s *switchMapSubscriber) Complete() {
+	fmt.Println("out complete")
+	s.index = s.index - 1
+	if s.index <= 0 {
+		s.parent.Complete()
+	}
 }
 
 type switchMapOperator struct {
@@ -54,14 +70,67 @@ func newSwitchMapOperator(project func(interface{}) base.Subscribable) switchMap
 	return *newInstance
 }
 
-func (m *switchMapOperator) Call(subscriber *base.Subscriber, source base.Observable) base.Unsubscribable {
-	nsms := newSwitchMapSubscriber(subscriber, m.project)
+func (s *switchMapOperator) Call(subscriber *base.Subscriber, source base.Observable) base.Unsubscribable {
+	nsms := newSwitchMapSubscriber(subscriber, s.project)
 	return source.Subscribe(nsms.Next, nsms.Error, nsms.Complete)
 }
 
 func SwitchMap(fn func(interface{}) base.Subscribable) base.OperatorFunction {
 	return func(source base.Observable) base.Observable {
 		op := newSwitchMapOperator(fn)
-		return source.Lift(&op)
+		ob := source.Lift(&op)
+		return *ob
 	}
+}
+
+func switchMap(transformFn func(interface{}) base.Subscribable) base.OperatorFunction {
+	result := func(inObservable base.Observable) base.Observable {
+		outObservable := base.NewObservable(func(outObserver base.Observer) base.Unsubscribable {
+			inner_subscription := base.NewSubscription(func() {})
+			var innerSubscription base.Unsubscribable = &inner_subscription
+			active := 1
+			inObserver := base.NewSubscriber(
+				func(x interface{}) {
+					fmt.Println("inner value ", x)
+					inner := transformFn(x)
+					active++
+					innerObserver := base.NewSubscriber(
+						func(y interface{}) {
+							outObserver.Next(y)
+						},
+						func(err error) {
+							outObserver.Error(err)
+						},
+						func() {
+							active = active - 1
+							if active <= 0 {
+								outObserver.Complete()
+							}
+						},
+					)
+					innerSubscription.Unsubscribe()
+					is := inner.Subscribe(innerObserver.Next, innerObserver.Error, innerObserver.Complete).(*base.Subscriber)
+					innerSubscription = is
+				},
+				func(err error) {
+					outObserver.Error(err)
+				},
+				func() {
+					fmt.Println("test")
+					active = active - 1
+					if active <= 0 {
+						outObserver.Complete()
+					}
+				},
+			)
+			subscription := inObserver.Subscription
+			subscription.Add(innerSubscription)
+			s := inObservable.Subscribe(inObserver.Next, inObserver.Error, inObserver.Complete)
+			subscription.Add(s)
+			return subscription
+		})
+		return outObservable
+	}
+
+	return result
 }
