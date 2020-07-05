@@ -1,8 +1,6 @@
 package operators
 
 import (
-	"fmt"
-
 	"github.com/amao/toy-rxgo/src/base"
 )
 
@@ -22,13 +20,11 @@ func newMergeMapSubscriber(subscriber *base.Subscriber, project func(interface{}
 }
 
 func (m *mergeMapSubscriber) Next(value interface{}) {
-	fmt.Println("from value: ", value)
 	innerObservable := m.project(value)
 	m.index++
 
 	sink := innerObservable.Subscribe(
 		func(value interface{}) {
-			fmt.Println("to value: ", value)
 			m.Destination.Next(value)
 		},
 		func(err error) {
@@ -67,10 +63,13 @@ func newMergeMapOperator(project func(interface{}) base.Subscribable) mergeMapOp
 
 func (m *mergeMapOperator) Call(subscriber *base.Subscriber, source base.Observable) base.Unsubscribable {
 	nmms := newMergeMapSubscriber(subscriber, m.project)
-	return source.Subscribe(nmms.Next, nmms.Error, nmms.Complete)
+	result := base.NewSubscriber(nmms.Next, nmms.Error, nmms.Complete)
+	result.Subscription = nmms.Subscriber.Subscription
+	result.IsStopped = false
+	return source.Subscribe(result)
 }
 
-func MergeMap_(fn func(interface{}) base.Subscribable) base.OperatorFunction {
+func MergeMap(fn func(interface{}) base.Subscribable) base.OperatorFunction {
 	return func(source base.Observable) base.Observable {
 		op := newMergeMapOperator(fn)
 		ob := source.Lift(&op)
@@ -78,7 +77,7 @@ func MergeMap_(fn func(interface{}) base.Subscribable) base.OperatorFunction {
 	}
 }
 
-func MergeMap(transformFn func(interface{}) base.Subscribable) base.OperatorFunction {
+func MergeMap_(transformFn func(interface{}) base.Subscribable) base.OperatorFunction {
 	result := func(inObservable base.Observable) base.Observable {
 		outObservable := base.NewObservable(func(outObserver base.Observer) base.Unsubscribable {
 			subscription := base.NewSubscription()

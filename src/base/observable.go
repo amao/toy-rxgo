@@ -65,7 +65,7 @@ func toSubscriber(args ...interface{}) Subscriber {
 		result := NewSubscriber()
 		return result
 	case 1:
-		result := NewSubscriber(args[0].(Subscriber).Destination.Next, args[0].(Subscriber).Destination.Error, args[0].(Subscriber).Destination.Complete)
+		result := args[0].(Subscriber)
 		return result
 	default:
 		result := NewSubscriber(args[0].(func(interface{})), args[1].(func(error)), args[2].(func()))
