@@ -20,13 +20,3 @@ type Operator interface {
 type Subscribable interface {
 	Subscribe(args ...interface{}) Unsubscribable
 }
-
-type TimestampProviderAndSchedulerLike interface {
-	Now() float64
-	Schedule(work func(scheduler SchedulerAction, state interface{}), delay float64, state interface{}) Unsubscribable
-}
-
-type SchedulerAction interface {
-	Schedule(state interface{}, delay float64) Unsubscribable
-	Unsubscribable
-}

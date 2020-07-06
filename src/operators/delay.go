@@ -1,119 +1,85 @@
 package operators
 
 import (
-	"math"
-
 	"github.com/amao/toy-rxgo/src/base"
+	"time"
 )
 
-type delayState struct {
-	source      delaySubscriber
-	destination base.Subscriber
-	scheduler   base.TimestampProviderAndSchedulerLike
-}
-
-func newDelayState(source delaySubscriber, destination base.Subscriber, scheduler base.TimestampProviderAndSchedulerLike) delayState {
-	newInstance := delayState{}
-	newInstance.source = source
-	newInstance.destination = destination
-	newInstance.scheduler = scheduler
-	return newInstance
-}
-
 type delayMessage struct {
-	time  float64
+	now   float64
 	value interface{}
 }
 
-func newDelayMessage(time float64, value interface{}) delayMessage {
-	newInstance := delayMessage{}
-	newInstance.time = time
+func newDelayMessage(value interface{}) delayMessage {
+	newInstance := new(delayMessage)
+	newInstance.now = float64(time.Now().Second() * 1000)
 	newInstance.value = value
-	return newInstance
+	return *newInstance
 }
 
 type delaySubscriber struct {
-	parent    base.Subscriber
-	queue     []delayMessage
-	active    bool
-	delay     float64
-	scheduler base.TimestampProviderAndSchedulerLike
+	*base.Subscriber
+	queue []delayMessage
+	delay float64
 }
 
-func newDelaySubscriber(destination base.Subscriber, delay float64, scheduler base.TimestampProviderAndSchedulerLike) delaySubscriber {
-	newInstance := delaySubscriber{}
-	newInstance.parent = base.NewSubscriber(destination.Next, destination.Error, destination.Complete)
-	return newInstance
+func newDelaySubscriber(destination base.Subscriber, delay float64) delaySubscriber {
+	newInstance := new(delaySubscriber)
+	s := base.NewSubscriber(destination.Next, destination.Error, destination.Complete)
+	newInstance.Subscriber = &s
+	newInstance.delay = delay
+
+	go func() {
+		for {
+			for _, msg := range newInstance.queue {
+				if float64(time.Now().Second()*1000)-msg.now >= delay {
+					newInstance.Destination.Next(msg.value)
+					newInstance.queue = newInstance.queue[1:]
+				}
+			}
+		}
+	}()
+
+	return *newInstance
 }
 
-func dispatch(schedulerAction base.SchedulerAction, state interface{}) {
-	ds := state.(delayState)
-	source := ds.source
-	queue := source.queue
-	scheduler := ds.scheduler
-	destination := ds.destination
-
-	for len(queue) > 0 && (queue[0].time-scheduler.Now() <= 0) {
-		destination.Next(queue[0].value)
-		queue = queue[1:]
-	}
-
-	if len(queue) > 0 {
-		delay := math.Max(0, queue[0].time-scheduler.Now())
-		schedulerAction.Schedule(state, delay)
-	} else if source.parent.IsStopped {
-		source.parent.Complete()
-		source.active = false
-	} else {
-		schedulerAction.Unsubscribe()
-		source.active = false
-	}
+func (d *delaySubscriber) Next(value interface{}) {
+	d.Destination.Next(value)
 }
 
-func (d delaySubscriber) schedule(scheduler base.TimestampProviderAndSchedulerLike) {
-	d.active = true
-	destination := d.parent.Subscription
-	destination.Add(
-		scheduler.Schedule(dispatch, d.delay, newDelayState(d, d.parent, scheduler)),
-	)
+func (d *delaySubscriber) Error(err error) {
+	d.queue = nil
+	d.Destination.Error(err)
+	d.Subscriber.Unsubscribe()
 }
 
-func (d delaySubscriber) Next(value interface{}) {
-	scheduler := d.scheduler
-	message := newDelayMessage(scheduler.Now()+d.delay, value)
-	d.queue = append(d.queue, message)
-	if !d.active {
-		d.schedule(scheduler)
-	}
-}
-
-func (d delaySubscriber) Error(err error) {
+func (d *delaySubscriber) Complete() {
 	if len(d.queue) == 0 {
-		d.parent.Destination.Complete()
+		d.Destination.Complete()
 	}
-
-	d.parent.Unsubscribe()
-}
-
-func (d delaySubscriber) Complete() {
-	d.parent.Unsubscribe()
+	d.Subscriber.Unsubscribe()
 }
 
 type delayOperator struct {
-	delay     float64
-	scheduler base.TimestampProviderAndSchedulerLike
+	delay float64
 }
 
-func newDelayOperator(delay float64, scheduler base.TimestampProviderAndSchedulerLike) delayOperator {
-	newInstance := delayOperator{}
+func newDelayOperator(delay float64) delayOperator {
+	newInstance := new(delayOperator)
 	newInstance.delay = delay
-	newInstance.scheduler = scheduler
-	return newInstance
+	return *newInstance
 }
 
-func (d delayOperator) Call(subscriber base.Subscriber, source base.Observable) base.Unsubscribable {
-	do := newDelaySubscriber(subscriber, d.delay, d.scheduler)
-	return source.Subscribe(do.Next, do.Error, do.Complete)
+func (d *delayOperator) Call(subscriber *base.Subscriber, source base.Observable) base.Unsubscribable {
+	nds := newDelaySubscriber(*subscriber, d.delay)
+	time.Sleep(time.Duration(d.delay) * time.Millisecond)
+	return source.Subscribe(nds.Next, nds.Error, nds.Complete)
 }
 
-//todo
+func Delay(delay float64, args ...interface{}) base.OperatorFunction {
+	result := func(source base.Observable) base.Observable {
+		op := newDelayOperator(delay)
+		return *source.Lift(&op)
+	}
+	return result
+}
