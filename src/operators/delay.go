@@ -5,21 +5,8 @@ import (
 	"time"
 )
 
-type delayMessage struct {
-	now   float64
-	value interface{}
-}
-
-func newDelayMessage(value interface{}) delayMessage {
-	newInstance := new(delayMessage)
-	newInstance.now = float64(time.Now().Second() * 1000)
-	newInstance.value = value
-	return *newInstance
-}
-
 type delaySubscriber struct {
 	*base.Subscriber
-	queue []delayMessage
 	delay float64
 }
 
@@ -28,18 +15,6 @@ func newDelaySubscriber(destination base.Subscriber, delay float64) delaySubscri
 	s := base.NewSubscriber(destination.Next, destination.Error, destination.Complete)
 	newInstance.Subscriber = &s
 	newInstance.delay = delay
-
-	go func() {
-		for {
-			for _, msg := range newInstance.queue {
-				if float64(time.Now().Second()*1000)-msg.now >= delay {
-					newInstance.Destination.Next(msg.value)
-					newInstance.queue = newInstance.queue[1:]
-				}
-			}
-		}
-	}()
-
 	return *newInstance
 }
 
@@ -48,15 +23,12 @@ func (d *delaySubscriber) Next(value interface{}) {
 }
 
 func (d *delaySubscriber) Error(err error) {
-	d.queue = nil
 	d.Destination.Error(err)
 	d.Subscriber.Unsubscribe()
 }
 
 func (d *delaySubscriber) Complete() {
-	if len(d.queue) == 0 {
-		d.Destination.Complete()
-	}
+	d.Destination.Complete()
 	d.Subscriber.Unsubscribe()
 }
 
