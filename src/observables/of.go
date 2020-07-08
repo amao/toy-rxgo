@@ -5,12 +5,12 @@ import (
 )
 
 func Of(args ...interface{}) *base.Observable {
-	result := base.NewObservable(func(observer base.Observer) base.Unsubscribable {
+	result := base.NewObservable(func(observer base.Observer) base.SubscriptionLike {
 		for _, value := range args {
 			observer.Next(value)
 		}
 		observer.Complete()
-		sp := base.NewSubscription()
+		sp := base.NewSubscription(nil)
 		return &sp
 	})
 

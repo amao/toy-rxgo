@@ -1,8 +1,9 @@
 package operators
 
 import (
-	"github.com/amao/toy-rxgo/src/base"
 	"time"
+
+	"github.com/amao/toy-rxgo/src/base"
 )
 
 type delaySubscriber struct {
@@ -42,7 +43,7 @@ func newDelayOperator(delay float64) delayOperator {
 	return *newInstance
 }
 
-func (d *delayOperator) Call(subscriber *base.Subscriber, source base.Observable) base.Unsubscribable {
+func (d *delayOperator) Call(subscriber *base.Subscriber, source base.Observable) base.SubscriptionLike {
 	nds := newDelaySubscriber(*subscriber, d.delay)
 	time.Sleep(time.Duration(d.delay) * time.Millisecond)
 	return source.Subscribe(nds.Next, nds.Error, nds.Complete)

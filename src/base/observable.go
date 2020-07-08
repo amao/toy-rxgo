@@ -1,12 +1,12 @@
 package base
 
 type Observable struct {
-	subscribe func(Observer) Unsubscribable
+	subscribe func(Observer) SubscriptionLike
 	source    *Observable
 	operator  Operator
 }
 
-func NewObservable(subscribe func(Observer) Unsubscribable) Observable {
+func NewObservable(subscribe func(Observer) SubscriptionLike) Observable {
 	observable := new(Observable)
 	if subscribe != nil {
 		observable.subscribe = subscribe
@@ -29,11 +29,11 @@ func (o *Observable) Pipe(operations ...OperatorFunction) *Observable {
 
 func (o *Observable) Lift(operator Operator) *Observable {
 	observable := new(Observable)
-	observable.subscribe = func(subscriber Observer) Unsubscribable {
+	observable.subscribe = func(subscriber Observer) SubscriptionLike {
 		if o.source != nil {
 			o.source.Subscribe(subscriber.Next, subscriber.Error, subscriber.Complete)
 		}
-		subscription := NewSubscription()
+		subscription := NewSubscription(nil)
 		return &subscription
 	}
 	observable.source = o
@@ -41,12 +41,12 @@ func (o *Observable) Lift(operator Operator) *Observable {
 	return observable
 }
 
-func (o *Observable) Subscribe(args ...interface{}) Unsubscribable {
+func (o *Observable) Subscribe(args ...interface{}) SubscriptionLike {
 	sink := toSubscriber(args...)
 
 	operator := o.operator
 
-	var subscription Unsubscribable
+	var subscription SubscriptionLike
 
 	if operator != nil {
 		subscription = operator.Call(&sink, *o.source)

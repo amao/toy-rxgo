@@ -87,8 +87,12 @@ func (s *Subscriber) Complete() {
 	}
 }
 
+func (s *Subscriber) Closed() bool {
+	return s.closed
+}
+
 func (s *Subscriber) Unsubscribe() {
-	if s.Subscription.Closed {
+	if s.closed {
 		return
 	}
 
@@ -139,6 +143,10 @@ func (s *safeSubscriber) Complete() {
 	if !s.subscriber.IsStopped {
 		s.complete()
 	}
+}
+
+func (s *safeSubscriber) Closed() bool {
+	return s.Closed()
 }
 
 func (s *safeSubscriber) Unsubscribe() {

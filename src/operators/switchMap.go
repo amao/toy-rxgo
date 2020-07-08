@@ -7,7 +7,7 @@ import (
 type switchMapSubscriber struct {
 	parent            base.Subscriber
 	fn                func(interface{}) base.Subscribable
-	innerSubscription base.Unsubscribable
+	innerSubscription base.SubscriptionLike
 	index             int
 }
 
@@ -16,7 +16,7 @@ func newSwitchMapSubscriber(subscriber *base.Subscriber, fn func(interface{}) ba
 	newInstance.index = 1
 	newInstance.parent = base.NewSubscriber(subscriber.Next, subscriber.Error, subscriber.Complete)
 	newInstance.fn = fn
-	sp := base.NewSubscription()
+	sp := base.NewSubscription(nil)
 	newInstance.innerSubscription = &sp
 	subscriber.Add(newInstance.innerSubscription)
 	return *newInstance
@@ -67,7 +67,7 @@ func newSwitchMapOperator(project func(interface{}) base.Subscribable) switchMap
 	return *newInstance
 }
 
-func (s *switchMapOperator) Call(subscriber *base.Subscriber, source base.Observable) base.Unsubscribable {
+func (s *switchMapOperator) Call(subscriber *base.Subscriber, source base.Observable) base.SubscriptionLike {
 	nsms := newSwitchMapSubscriber(subscriber, s.project)
 	return source.Subscribe(nsms.Next, nsms.Error, nsms.Complete)
 }
@@ -82,9 +82,9 @@ func SwitchMap_(fn func(interface{}) base.Subscribable) base.OperatorFunction {
 
 func SwitchMap(transformFn func(interface{}) base.Subscribable) base.OperatorFunction {
 	result := func(inObservable base.Observable) base.Observable {
-		outObservable := base.NewObservable(func(outObserver base.Observer) base.Unsubscribable {
+		outObservable := base.NewObservable(func(outObserver base.Observer) base.SubscriptionLike {
 			inner_subscription := base.NewSubscription(func() {})
-			var innerSubscription base.Unsubscribable = &inner_subscription
+			var innerSubscription base.SubscriptionLike = &inner_subscription
 			active := 1
 			inObserver := base.NewSubscriber(
 				func(x interface{}) {

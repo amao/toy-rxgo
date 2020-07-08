@@ -7,6 +7,11 @@ type Unsubscribable interface {
 	Unsubscribe()
 }
 
+type SubscriptionLike interface {
+	Unsubscribable
+	Closed() bool
+}
+
 type Observer interface {
 	Next(value interface{})
 	Error(error)
@@ -14,9 +19,9 @@ type Observer interface {
 }
 
 type Operator interface {
-	Call(subscriber *Subscriber, source Observable) Unsubscribable
+	Call(subscriber *Subscriber, source Observable) SubscriptionLike
 }
 
 type Subscribable interface {
-	Subscribe(args ...interface{}) Unsubscribable
+	Subscribe(args ...interface{}) SubscriptionLike
 }

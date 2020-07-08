@@ -5,49 +5,41 @@ import (
 )
 
 type Subscription struct {
-	Closed        bool
-	subscriptions []Unsubscribable
-	unsubscribe   func()
+	closed          bool //default value = false
+	parentOrParents interface{}
+	subscriptions   []Unsubscribable
+	unsubscribe     func()
 }
 
-func NewSubscription(args ...func()) Subscription {
+func NewSubscription(unsubscribe interface{}) Subscription {
 	newInstance := new(Subscription)
-	if len(args) != 0 {
-		newInstance.unsubscribe = args[0]
-		newInstance.Closed = false
+	if unsubscribe != nil {
+		newInstance.unsubscribe = unsubscribe.(func())
+		newInstance.closed = false
 	}
 	return *newInstance
 }
 
-func (s *Subscription) Add(teardown Unsubscribable) Unsubscribable {
-	var subscriptionLike Unsubscribable
-	if subscription, ok := teardown.(*Subscription); ok {
-		subscriptionLike = subscription
-		if reflect.DeepEqual(subscription, s) || subscription.Closed {
-			return subscription
-		} else if s.Closed {
-			subscription.Unsubscribe()
-			return subscription
-		}
-	}
+func (s *Subscription) Closed() bool {
+	return s.closed
+}
 
-	if subscriber, ok := teardown.(*Subscriber); ok {
-		subscriptionLike = subscriber
-		if reflect.DeepEqual(subscriber, s) || subscriber.Subscription.Closed {
-			return subscriber
-		} else if s.Closed {
-			subscriber.Unsubscribe()
-			return subscriber
-		}
+func (s *Subscription) Add(teardown SubscriptionLike) Unsubscribable {
+
+	if reflect.DeepEqual(teardown, s) || teardown.Closed() {
+		return teardown
+	} else if s.Closed() {
+		teardown.Unsubscribe()
+		return teardown
 	}
 
 	if s.subscriptions == nil {
-		s.subscriptions = []Unsubscribable{subscriptionLike}
+		s.subscriptions = []Unsubscribable{teardown}
 	} else {
-		s.subscriptions = append(s.subscriptions, subscriptionLike)
+		s.subscriptions = append(s.subscriptions, teardown)
 	}
 
-	return subscriptionLike
+	return teardown
 }
 
 func (s *Subscription) Remove(subscription Subscription) {
@@ -75,11 +67,11 @@ func (s *Subscription) Remove(subscription Subscription) {
 }
 
 func (s *Subscription) Unsubscribe() {
-	if s.Closed {
+	if s.closed {
 		return
 	}
 
-	s.Closed = true
+	s.closed = true
 
 	if s.unsubscribe != nil {
 		s.unsubscribe()
