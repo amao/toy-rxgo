@@ -41,3 +41,17 @@ type OuterSubscriberLike interface {
 	NotifyError(error)
 	NotifComplete(innerSub InnerSubscriber)
 }
+
+type SchedulerAction interface {
+	SubscriptionLike
+	Schedule(state interface{}, delay float64) SubscriptionLike
+}
+
+type TimestampProvider interface {
+	Now() float64
+}
+
+type SchedulerLike interface {
+	TimestampProvider
+	Schedule(work func(interface{}), delay float64, state interface{}) SubscriptionLike
+}
