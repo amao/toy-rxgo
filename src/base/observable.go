@@ -49,26 +49,26 @@ func (o *Observable) Subscribe(args ...interface{}) SubscriptionLike {
 	var subscription SubscriptionLike
 
 	if operator != nil {
-		subscription = operator.Call(&sink, *o.source)
+		subscription = operator.Call(sink, *o.source)
 	} else {
-		subscription = o.subscribe(&sink)
+		subscription = o.subscribe(sink)
 	}
 
 	sink.Add(subscription)
 
-	return &sink
+	return sink
 }
 
-func toSubscriber(args ...interface{}) Subscriber {
+func toSubscriber(args ...interface{}) SubscriberLike {
 	switch len(args) {
 	case 0:
 		result := NewSubscriber()
-		return result
+		return &result
 	case 1:
-		result := args[0].(Subscriber)
+		result := args[0].(SubscriberLike)
 		return result
 	default:
 		result := NewSubscriber(args[0].(func(interface{})), args[1].(func(error)), args[2].(func()))
-		return result
+		return &result
 	}
 }

@@ -11,7 +11,7 @@ type delaySubscriber struct {
 	delay float64
 }
 
-func newDelaySubscriber(destination base.Subscriber, delay float64) delaySubscriber {
+func newDelaySubscriber(destination base.SubscriberLike, delay float64) delaySubscriber {
 	newInstance := new(delaySubscriber)
 	s := base.NewSubscriber(destination.Next, destination.Error, destination.Complete)
 	newInstance.Subscriber = &s
@@ -43,8 +43,8 @@ func newDelayOperator(delay float64) delayOperator {
 	return *newInstance
 }
 
-func (d *delayOperator) Call(subscriber *base.Subscriber, source base.Observable) base.SubscriptionLike {
-	nds := newDelaySubscriber(*subscriber, d.delay)
+func (d *delayOperator) Call(subscriber base.SubscriberLike, source base.Observable) base.SubscriptionLike {
+	nds := newDelaySubscriber(subscriber, d.delay)
 	time.Sleep(time.Duration(d.delay) * time.Millisecond)
 	return source.Subscribe(nds.Next, nds.Error, nds.Complete)
 }

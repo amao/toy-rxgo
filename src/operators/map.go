@@ -27,7 +27,7 @@ type mapSubscriber struct {
 	project    func(interface{}) interface{}
 }
 
-func newMapSubscriber(destination base.Subscriber, project func(interface{}) interface{}) mapSubscriber {
+func newMapSubscriber(destination base.SubscriberLike, project func(interface{}) interface{}) mapSubscriber {
 	newInstance := mapSubscriber{}
 	newInstance.subscriber = base.NewSubscriber(destination.Next, destination.Error, destination.Complete)
 	newInstance.project = project
@@ -56,8 +56,8 @@ func newMapOperator(project func(interface{}) interface{}) mapOperator {
 	return newInstance
 }
 
-func (m mapOperator) Call(subscriber *base.Subscriber, source base.Observable) base.SubscriptionLike {
-	nms := newMapSubscriber(*subscriber, m.project)
+func (m mapOperator) Call(subscriber base.SubscriberLike, source base.Observable) base.SubscriptionLike {
+	nms := newMapSubscriber(subscriber, m.project)
 	return source.Subscribe(nms.Next, nms.Error, nms.Complete)
 }
 

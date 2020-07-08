@@ -10,18 +10,34 @@ type Unsubscribable interface {
 type SubscriptionLike interface {
 	Unsubscribable
 	Closed() bool
+	Add(SubscriptionLike) Unsubscribable
+	Remove(subscription SubscriptionLike)
+}
+
+type SubscriberLike interface {
+	Unsubscribable
+	Closed() bool
+	Add(SubscriptionLike) Unsubscribable
+	Remove(subscription SubscriptionLike)
+	Observer
 }
 
 type Observer interface {
-	Next(value interface{})
+	Next(interface{})
 	Error(error)
 	Complete()
 }
 
 type Operator interface {
-	Call(subscriber *Subscriber, source Observable) SubscriptionLike
+	Call(subscriber SubscriberLike, source Observable) SubscriptionLike
 }
 
 type Subscribable interface {
 	Subscribe(args ...interface{}) SubscriptionLike
+}
+
+type OuterSubscriberLike interface {
+	NotifyNext(interface{})
+	NotifyError(error)
+	NotifComplete(innerSub InnerSubscriber)
 }

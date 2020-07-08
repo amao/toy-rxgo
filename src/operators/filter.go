@@ -27,7 +27,7 @@ type filterSubscriber struct {
 	predicate  func(interface{}) bool
 }
 
-func newFilterSubscriber(destination base.Subscriber, predicate func(interface{}) bool) filterSubscriber {
+func newFilterSubscriber(destination base.SubscriberLike, predicate func(interface{}) bool) filterSubscriber {
 	newInstance := filterSubscriber{}
 	newInstance.subscriber = base.NewSubscriber(destination.Next, destination.Error, destination.Complete)
 	newInstance.predicate = predicate
@@ -58,8 +58,8 @@ func newFilterOperator(predicate func(interface{}) bool) filterOperator {
 	return newInstance
 }
 
-func (m filterOperator) Call(subscriber *base.Subscriber, source base.Observable) base.SubscriptionLike {
-	nfs := newFilterSubscriber(*subscriber, m.predicate)
+func (m filterOperator) Call(subscriber base.SubscriberLike, source base.Observable) base.SubscriptionLike {
+	nfs := newFilterSubscriber(subscriber, m.predicate)
 	return source.Subscribe(nfs.Next, nfs.Error, nfs.Complete)
 }
 

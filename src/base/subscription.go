@@ -42,7 +42,7 @@ func (s *Subscription) Add(teardown SubscriptionLike) Unsubscribable {
 	return teardown
 }
 
-func (s *Subscription) Remove(subscription Subscription) {
+func (s *Subscription) Remove(subscription SubscriptionLike) {
 	subscriptions := s.subscriptions
 
 	if subscriptions != nil {
@@ -78,6 +78,9 @@ func (s *Subscription) Unsubscribe() {
 	}
 
 	for _, sub := range s.subscriptions {
-		sub.Unsubscribe()
+		if sub != nil {
+			sub.Unsubscribe()
+		}
+
 	}
 }

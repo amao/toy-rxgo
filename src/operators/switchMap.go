@@ -11,7 +11,7 @@ type switchMapSubscriber struct {
 	index             int
 }
 
-func newSwitchMapSubscriber(subscriber *base.Subscriber, fn func(interface{}) base.Subscribable) switchMapSubscriber {
+func newSwitchMapSubscriber(subscriber base.SubscriberLike, fn func(interface{}) base.Subscribable) switchMapSubscriber {
 	newInstance := new(switchMapSubscriber)
 	newInstance.index = 1
 	newInstance.parent = base.NewSubscriber(subscriber.Next, subscriber.Error, subscriber.Complete)
@@ -67,7 +67,7 @@ func newSwitchMapOperator(project func(interface{}) base.Subscribable) switchMap
 	return *newInstance
 }
 
-func (s *switchMapOperator) Call(subscriber *base.Subscriber, source base.Observable) base.SubscriptionLike {
+func (s *switchMapOperator) Call(subscriber base.SubscriberLike, source base.Observable) base.SubscriptionLike {
 	nsms := newSwitchMapSubscriber(subscriber, s.project)
 	return source.Subscribe(nsms.Next, nsms.Error, nsms.Complete)
 }
