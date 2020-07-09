@@ -36,16 +36,17 @@ func (a *AsyncAction) Schedule(state interface{}, delay float64) SubscriptionLik
 	a.delay = delay
 
 	if a.id == nil {
-		a.requestAsyncId(scheduler, a.id, delay)
+		a.id = a.requestAsyncId(scheduler, a.id, delay)
 	}
 
 	return a
 }
 
 func (a *AsyncAction) requestAsyncId(scheduler SchedulerLike, id interface{}, delay float64) interface{} {
-	t := time.After(time.Duration(delay) * time.Millisecond)
+	// Why not using time.After? See implementation of AsyncAction in RxJs
+	t := time.NewTicker(time.Duration(delay) * time.Millisecond)
 	go func() {
-		for range t {
+		for range t.C {
 			asyncScheduler := scheduler.(*AsyncScheduler)
 			asyncScheduler.flush(*a)
 		}
@@ -59,7 +60,7 @@ func (a *AsyncAction) recycleAsyncId(scheduler SchedulerLike, id interface{}, de
 		return id
 	}
 
-	ticker := id.(time.Ticker)
+	ticker := id.(*time.Ticker)
 	ticker.Stop()
 
 	return nil
@@ -84,4 +85,10 @@ func (a *AsyncAction) execute(state interface{}, delay float64) interface{} {
 	}
 
 	return nil
+}
+
+func (a *AsyncAction) Unsubscribe() {
+	if a.id != nil {
+		a.id = a.recycleAsyncId(a.scheduler, a.id, -1)
+	}
 }
