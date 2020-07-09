@@ -29,13 +29,6 @@ func (o *Observable) Pipe(operations ...OperatorFunction) *Observable {
 
 func (o *Observable) Lift(operator Operator) Observable {
 	observable := new(Observable)
-	observable.subscribe = func(subscriber SubscriberLike) SubscriptionLike {
-		if o.source != nil {
-			o.source.Subscribe(subscriber)
-		}
-		subscription := NewSubscription(nil)
-		return &subscription
-	}
 	observable.source = o
 	observable.operator = operator
 	return *observable
