@@ -12,7 +12,7 @@ type AsyncAction struct {
 	pending bool // default value = false
 }
 
-func NewAsyncAction(scheduler SchedulerLike, work func(state interface{})) AsyncAction {
+func NewAsyncAction(scheduler SchedulerLike, work func(SchedulerAction, interface{})) AsyncAction {
 	newInstance := new(AsyncAction)
 	action := NewAction(scheduler, work)
 	newInstance.Action = &action
@@ -43,9 +43,9 @@ func (a *AsyncAction) Schedule(state interface{}, delay float64) SubscriptionLik
 }
 
 func (a *AsyncAction) requestAsyncId(scheduler SchedulerLike, id interface{}, delay float64) interface{} {
-	t := time.NewTicker(time.Duration(delay) * time.Millisecond)
+	t := time.After(time.Duration(delay) * time.Millisecond)
 	go func() {
-		for range t.C {
+		for range t {
 			asyncScheduler := scheduler.(*AsyncScheduler)
 			asyncScheduler.flush(*a)
 		}
@@ -66,7 +66,7 @@ func (a *AsyncAction) recycleAsyncId(scheduler SchedulerLike, id interface{}, de
 }
 
 func (a *AsyncAction) _execute(state interface{}, delay float64) interface{} {
-	a.work(state)
+	a.work(a, state)
 	return nil
 }
 

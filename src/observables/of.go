@@ -5,7 +5,7 @@ import (
 )
 
 func Of(args ...interface{}) *base.Observable {
-	result := base.NewObservable(func(observer base.Observer) base.SubscriptionLike {
+	result := base.NewObservable(func(observer base.SubscriberLike) base.SubscriptionLike {
 		for _, value := range args {
 			observer.Next(value)
 		}

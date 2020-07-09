@@ -1,7 +1,7 @@
 package base
 
 type Subscriber struct {
-	Destination Observer
+	Destination SubscriberLike
 	*Subscription
 	IsStopped bool
 }
@@ -12,42 +12,42 @@ func NewSubscriber(args ...interface{}) Subscriber {
 	switch len(args) {
 	case 0:
 		emptyO := NewEmptyObserver()
-		newInstance.Destination = &emptyO
+		newInstance.Destination = emptyO
 	case 1:
-		if obv, ok := args[0].(Observer); ok {
+		if obv, ok := args[0].(SubscriberLike); ok {
 			newInstance.Destination = obv
 		} else if nextFn, ok := args[0].(func(interface{})); ok {
 			safeSub := newSafeSubscriber(*newInstance, nextFn, nil, nil)
-			newInstance.Destination = &safeSub
+			newInstance.Destination = safeSub
 		} else {
 			emptyO := NewEmptyObserver()
-			newInstance.Destination = &emptyO
+			newInstance.Destination = emptyO
 		}
 	case 2:
 		if nextFn, ok := args[0].(func(interface{})); ok {
 			if errFn, ok := args[1].(func(error)); ok {
 				safeSub := newSafeSubscriber(*newInstance, nextFn, errFn, nil)
-				newInstance.Destination = &safeSub
+				newInstance.Destination = safeSub
 				break
 			}
 		}
 		emptyO := NewEmptyObserver()
-		newInstance.Destination = &emptyO
+		newInstance.Destination = emptyO
 	case 3:
 		if nextFn, ok := args[0].(func(interface{})); ok {
 			if errFn, ok := args[1].(func(error)); ok {
 				if completeFn, ok := args[2].(func()); ok {
 					safeSub := newSafeSubscriber(*newInstance, nextFn, errFn, completeFn)
-					newInstance.Destination = &safeSub
+					newInstance.Destination = safeSub
 					break
 				}
 			}
 		}
 		emptyO := NewEmptyObserver()
-		newInstance.Destination = &emptyO
+		newInstance.Destination = emptyO
 	default:
 		safeSub := newSafeSubscriber(*newInstance, args[0].(func(interface{})), args[1].(func(error)), args[2].(func()))
-		newInstance.Destination = &safeSub
+		newInstance.Destination = safeSub
 	}
 
 	return *newInstance
@@ -101,16 +101,16 @@ func (s *Subscriber) Unsubscribe() {
 }
 
 type safeSubscriber struct {
-	subscriber *Subscriber
-	next       func(value interface{})
-	err        func(e error)
-	complete   func()
+	*Subscriber
+	next     func(value interface{})
+	err      func(e error)
+	complete func()
 }
 
-func newSafeSubscriber(parent Subscriber, next func(value interface{}), err func(e error), complete func()) safeSubscriber {
+func newSafeSubscriber(parent Subscriber, next func(value interface{}), err func(e error), complete func()) SubscriberLike {
 	newInstance := new(safeSubscriber)
 	subscriber := parent
-	newInstance.subscriber = &subscriber
+	newInstance.Subscriber = &subscriber
 	newInstance.next = next
 	if err != nil {
 		newInstance.err = err
@@ -123,24 +123,24 @@ func newSafeSubscriber(parent Subscriber, next func(value interface{}), err func
 		newInstance.complete = func() {}
 	}
 
-	return *newInstance
+	return newInstance
 
 }
 
 func (s *safeSubscriber) Next(value interface{}) {
-	if !s.subscriber.IsStopped {
+	if !s.Subscriber.IsStopped {
 		s.next(value)
 	}
 }
 
 func (s *safeSubscriber) Error(err error) {
-	if !s.subscriber.IsStopped {
+	if !s.Subscriber.IsStopped {
 		s.err(err)
 	}
 }
 
 func (s *safeSubscriber) Complete() {
-	if !s.subscriber.IsStopped {
+	if !s.Subscriber.IsStopped {
 		s.complete()
 	}
 }
@@ -150,5 +150,5 @@ func (s *safeSubscriber) Closed() bool {
 }
 
 func (s *safeSubscriber) Unsubscribe() {
-	s.subscriber.Unsubscribe()
+	s.Subscriber.Unsubscribe()
 }

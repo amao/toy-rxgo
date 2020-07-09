@@ -6,7 +6,7 @@ import (
 
 func _map(transformFn func(interface{}) interface{}) func(base.Observable) base.Observable {
 	result := func(inObservable base.Observable) base.Observable {
-		outObservable := base.NewObservable(func(outObserver base.Observer) base.SubscriptionLike {
+		outObservable := base.NewObservable(func(outObserver base.SubscriberLike) base.SubscriptionLike {
 			inObserver := base.NewSubscriber(
 				func(x interface{}) {
 					y := transformFn(x)
@@ -29,7 +29,7 @@ type mapSubscriber struct {
 
 func newMapSubscriber(destination base.SubscriberLike, project func(interface{}) interface{}) mapSubscriber {
 	newInstance := mapSubscriber{}
-	newInstance.subscriber = base.NewSubscriber(destination.Next, destination.Error, destination.Complete)
+	newInstance.subscriber = base.NewSubscriber(destination)
 	newInstance.project = project
 	return newInstance
 }
@@ -64,7 +64,7 @@ func (m mapOperator) Call(subscriber base.SubscriberLike, source base.Observable
 func Map(project func(interface{}) interface{}) base.OperatorFunction {
 	result := func(source base.Observable) base.Observable {
 		op := newMapOperator(project)
-		return *source.Lift(&op)
+		return source.Lift(&op)
 	}
 
 	return result

@@ -1,6 +1,9 @@
 package base
 
-import "reflect"
+import (
+	"reflect"
+	"time"
+)
 
 type AsyncScheduler struct {
 	*Scheduler
@@ -10,9 +13,9 @@ type AsyncScheduler struct {
 	scheduled interface{}
 }
 
-func NewAsyncScheduler(schedulerAction SchedulerAction, now func() float64) AsyncScheduler {
+func NewAsyncScheduler(schedulerAction string, now func() time.Time) AsyncScheduler {
 	newInstance := new(AsyncScheduler)
-	parentScheduler := NewScheduler(schedulerAction, func() float64 {
+	parentScheduler := NewScheduler(schedulerAction, func() time.Time {
 		if newInstance.delegate != nil && !reflect.DeepEqual(newInstance.delegate, newInstance) {
 			return newInstance.delegate.Now()
 		} else {
@@ -23,11 +26,11 @@ func NewAsyncScheduler(schedulerAction SchedulerAction, now func() float64) Asyn
 	return *newInstance
 }
 
-func (a *AsyncScheduler) Schedule(work func(interface{}), delay float64, state interface{}) SubscriptionLike {
+func (a *AsyncScheduler) Schedule(scheduler SchedulerLike, work func(SchedulerAction, interface{}), delay float64, state interface{}) SubscriptionLike {
 	if a.delegate != nil && !reflect.DeepEqual(a.delegate, a) {
-		return a.delegate.Schedule(work, delay, state)
+		return a.delegate.Schedule(a, work, delay, state)
 	} else {
-		return a.Scheduler.Schedule(work, delay, state)
+		return a.Scheduler.Schedule(a, work, delay, state)
 	}
 }
 
@@ -40,6 +43,8 @@ func (a *AsyncScheduler) flush(action AsyncAction) {
 	}
 
 	a.active = true
+
+	action.execute(action.state, action.delay)
 
 	for _, action := range actions {
 		action.execute(action.state, action.delay)

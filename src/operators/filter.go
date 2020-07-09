@@ -5,7 +5,7 @@ import "github.com/amao/toy-rxgo/src/base"
 // another style of writting a operator
 func filter(conditionFn func(interface{}) bool) func(base.Observable) base.Observable {
 	result := func(inObservable base.Observable) base.Observable {
-		outObservable := base.NewObservable(func(outObserver base.Observer) base.SubscriptionLike {
+		outObservable := base.NewObservable(func(outObserver base.SubscriberLike) base.SubscriptionLike {
 			inObserver := base.NewSubscriber(func(x interface{}) {
 				if conditionFn(x) {
 					outObserver.Next(x)
@@ -29,7 +29,7 @@ type filterSubscriber struct {
 
 func newFilterSubscriber(destination base.SubscriberLike, predicate func(interface{}) bool) filterSubscriber {
 	newInstance := filterSubscriber{}
-	newInstance.subscriber = base.NewSubscriber(destination.Next, destination.Error, destination.Complete)
+	newInstance.subscriber = base.NewSubscriber(destination)
 	newInstance.predicate = predicate
 	return newInstance
 }
@@ -66,7 +66,7 @@ func (m filterOperator) Call(subscriber base.SubscriberLike, source base.Observa
 func Filter(predicate func(interface{}) bool) base.OperatorFunction {
 	result := func(source base.Observable) base.Observable {
 		op := newFilterOperator(predicate)
-		return *source.Lift(&op)
+		return source.Lift(&op)
 	}
 
 	return result

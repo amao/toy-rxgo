@@ -52,7 +52,7 @@ func (d *delayOperator) Call(subscriber base.SubscriberLike, source base.Observa
 func Delay(delay float64, args ...interface{}) base.OperatorFunction {
 	result := func(source base.Observable) base.Observable {
 		op := newDelayOperator(delay)
-		return *source.Lift(&op)
+		return source.Lift(&op)
 	}
 	return result
 }

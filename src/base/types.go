@@ -1,5 +1,7 @@
 package base
 
+import "time"
+
 type OperatorFunction = func(Observable) Observable
 type UnaryFunction = func(interface{}) interface{}
 
@@ -48,10 +50,10 @@ type SchedulerAction interface {
 }
 
 type TimestampProvider interface {
-	Now() float64
+	Now() time.Time
 }
 
 type SchedulerLike interface {
 	TimestampProvider
-	Schedule(work func(interface{}), delay float64, state interface{}) SubscriptionLike
+	Schedule(scheduler SchedulerLike, work func(SchedulerAction, interface{}), delay float64, state interface{}) SubscriptionLike
 }

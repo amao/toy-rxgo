@@ -7,7 +7,7 @@ import (
 )
 
 func Interval(period int) *base.Observable {
-	result := base.NewObservable(func(observer base.Observer) base.SubscriptionLike {
+	result := base.NewObservable(func(observer base.SubscriberLike) base.SubscriptionLike {
 		t := time.NewTicker(time.Duration(period) * time.Millisecond)
 		go func() {
 			i := 0

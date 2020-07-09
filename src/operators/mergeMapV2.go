@@ -106,6 +106,6 @@ func MergeMapV2(project func(value interface{}) base.Subscribable) base.Operator
 	return func(source base.Observable) base.Observable {
 		op := newMergeMapOperatorV2(project, 99999)
 		ob := source.Lift(&op)
-		return *ob
+		return ob
 	}
 }

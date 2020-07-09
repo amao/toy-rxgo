@@ -3,10 +3,10 @@ package base
 type Action struct {
 	*Subscription
 	scheduler SchedulerLike
-	work      func(state interface{})
+	work      func(SchedulerAction, interface{})
 }
 
-func NewAction(scheduler SchedulerLike, work func(interface{})) Action {
+func NewAction(scheduler SchedulerLike, work func(SchedulerAction, interface{})) Action {
 	newInstance := new(Action)
 	parentSubscription := NewSubscription(nil)
 	newInstance.Subscription = &parentSubscription

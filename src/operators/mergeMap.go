@@ -73,13 +73,13 @@ func MergeMap(fn func(interface{}) base.Subscribable) base.OperatorFunction {
 	return func(source base.Observable) base.Observable {
 		op := newMergeMapOperator(fn)
 		ob := source.Lift(&op)
-		return *ob
+		return ob
 	}
 }
 
 func MergeMap_(transformFn func(interface{}) base.Subscribable) base.OperatorFunction {
 	result := func(inObservable base.Observable) base.Observable {
-		outObservable := base.NewObservable(func(outObserver base.Observer) base.SubscriptionLike {
+		outObservable := base.NewObservable(func(outObserver base.SubscriberLike) base.SubscriptionLike {
 			subscription := base.NewSubscription(nil)
 			active := 0
 			inObserver := base.NewSubscriber(
