@@ -24,11 +24,11 @@ func dispatch(schedulerAction base.SchedulerAction, state interface{}) {
 		counter:    counter + 1,
 		period:     period,
 	}
-
 	schedulerAction.Schedule(newIntervalState, period)
 }
 
-func IntervalV2(period uint) *base.Observable {
+// do not use v2, there is a bug...
+func intervalV2(period uint) *base.Observable {
 	async := base.NewAsyncScheduler("AsyncAction", func() time.Time {
 		return time.Now()
 	})

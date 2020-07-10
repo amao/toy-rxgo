@@ -6,9 +6,15 @@ import (
 	"github.com/amao/toy-rxgo/src/base"
 )
 
+type message struct {
+	time  time.Time
+	value interface{}
+}
+
 type delaySubscriber struct {
 	*base.Subscriber
 	delay float64
+	queue []message
 }
 
 func newDelaySubscriber(destination base.SubscriberLike, delay float64) delaySubscriber {
@@ -20,7 +26,14 @@ func newDelaySubscriber(destination base.SubscriberLike, delay float64) delaySub
 }
 
 func (d *delaySubscriber) Next(value interface{}) {
-	d.Destination.Next(value)
+	d.queue = append(d.queue, message{
+		time:  time.Now(),
+		value: value,
+	})
+	for len(d.queue) > 0 && float64(time.Now().Sub(d.queue[0].time).Milliseconds()) >= d.delay {
+		d.Destination.Next(d.queue[0].value)
+		d.queue = d.queue[1:]
+	}
 }
 
 func (d *delaySubscriber) Error(err error) {

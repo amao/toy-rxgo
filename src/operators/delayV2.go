@@ -125,7 +125,8 @@ func (d *delayOperatorV2) Call(subscriber base.SubscriberLike, source base.Obser
 	return source.Subscribe(&ndsv2)
 }
 
-func DelayV2(delay uint, args ...interface{}) base.OperatorFunction {
+// do not use v2
+func delayV2(delay uint, args ...interface{}) base.OperatorFunction {
 	result := func(source base.Observable) base.Observable {
 		async := base.NewAsyncScheduler("AsyncAction", func() time.Time {
 			return time.Now()
