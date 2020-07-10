@@ -15,6 +15,6 @@ func NewAction(scheduler SchedulerLike, work func(SchedulerAction, interface{}))
 	return *newInstance
 }
 
-func (a *Action) Schedule(state interface{}, delay float64) SubscriptionLike {
+func (a *Action) Schedule(state interface{}, delay uint) SubscriptionLike {
 	return a
 }

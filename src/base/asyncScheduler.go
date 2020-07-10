@@ -26,7 +26,7 @@ func NewAsyncScheduler(schedulerAction string, now func() time.Time) AsyncSchedu
 	return *newInstance
 }
 
-func (a *AsyncScheduler) Schedule(scheduler SchedulerLike, work func(SchedulerAction, interface{}), delay float64, state interface{}) SubscriptionLike {
+func (a *AsyncScheduler) Schedule(scheduler SchedulerLike, work func(SchedulerAction, interface{}), delay uint, state interface{}) SubscriptionLike {
 	if a.delegate != nil && !reflect.DeepEqual(a.delegate, a) {
 		return a.delegate.Schedule(a, work, delay, state)
 	} else {
@@ -34,11 +34,11 @@ func (a *AsyncScheduler) Schedule(scheduler SchedulerLike, work func(SchedulerAc
 	}
 }
 
-func (a *AsyncScheduler) flush(action AsyncAction) {
+func (a *AsyncScheduler) flush(action *AsyncAction) {
 	actions := a.actions
 
 	if a.active {
-		actions = append(actions, action)
+		actions = append(actions, *action)
 		return
 	}
 

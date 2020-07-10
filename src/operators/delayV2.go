@@ -1,7 +1,6 @@
 package operators
 
 import (
-	"math"
 	"time"
 
 	"github.com/amao/toy-rxgo/src/base"
@@ -29,7 +28,7 @@ type delaySubscriberV2 struct {
 	*base.Subscriber
 	queue     []delayMessage
 	active    bool //default value =false
-	delay     float64
+	delay     uint
 	scheduler base.SchedulerLike
 }
 
@@ -46,7 +45,14 @@ func dispatch(schedulerAction base.SchedulerAction, state interface{}) {
 	}
 
 	if len(queue) > 0 {
-		delay := math.Max(0, float64(queue[0].time.Sub(scheduler.Now()).Milliseconds()))
+		diff := queue[0].time.Sub(scheduler.Now()).Milliseconds()
+		var delay uint
+		if diff <= 0 {
+			// must be greater than zero
+			delay = 1
+		} else {
+			delay = uint(diff)
+		}
 		schedulerAction.Schedule(state, delay)
 	} else if source.IsStopped {
 		source.Destination.Complete()
@@ -57,7 +63,7 @@ func dispatch(schedulerAction base.SchedulerAction, state interface{}) {
 	}
 }
 
-func newDelaySubscriberV2(destination base.SubscriberLike, delay float64, scheduler base.SchedulerLike) delaySubscriberV2 {
+func newDelaySubscriberV2(destination base.SubscriberLike, delay uint, scheduler base.SchedulerLike) delaySubscriberV2 {
 	newInstance := new(delaySubscriberV2)
 	parentSubscriber := base.NewSubscriber(destination)
 	newInstance.Subscriber = &parentSubscriber
@@ -78,11 +84,13 @@ func (d *delaySubscriberV2) _schedule(scheduler base.SchedulerLike) {
 }
 
 func (d *delaySubscriberV2) Next(value interface{}) {
-	scheduler := d.scheduler
-	messge := newDelayMessage(scheduler.Now().Add(time.Millisecond*time.Duration(d.delay)), value)
-	d.queue = append(d.queue, messge)
-	if d.active == false {
-		d._schedule(scheduler)
+	if !d.IsStopped {
+		scheduler := d.scheduler
+		messge := newDelayMessage(scheduler.Now().Add(time.Millisecond*time.Duration(d.delay)), value)
+		d.queue = append(d.queue, messge)
+		if d.active == false {
+			d._schedule(scheduler)
+		}
 	}
 }
 
@@ -101,11 +109,11 @@ func (d *delaySubscriberV2) Complete() {
 }
 
 type delayOperatorV2 struct {
-	delay     float64
+	delay     uint
 	scheduler base.SchedulerLike
 }
 
-func newDelayOperatorV2(delay float64, scheduler base.SchedulerLike) delayOperatorV2 {
+func newDelayOperatorV2(delay uint, scheduler base.SchedulerLike) delayOperatorV2 {
 	newInstance := new(delayOperatorV2)
 	newInstance.delay = delay
 	newInstance.scheduler = scheduler
@@ -117,7 +125,7 @@ func (d *delayOperatorV2) Call(subscriber base.SubscriberLike, source base.Obser
 	return source.Subscribe(&ndsv2)
 }
 
-func DelayV2(delay float64, args ...interface{}) base.OperatorFunction {
+func DelayV2(delay uint, args ...interface{}) base.OperatorFunction {
 	result := func(source base.Observable) base.Observable {
 		async := base.NewAsyncScheduler("AsyncAction", func() time.Time {
 			return time.Now()

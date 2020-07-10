@@ -8,7 +8,7 @@ type AsyncAction struct {
 	*Action
 	id      interface{}
 	state   interface{}
-	delay   float64
+	delay   uint
 	pending bool // default value = false
 }
 
@@ -19,7 +19,7 @@ func NewAsyncAction(scheduler SchedulerLike, work func(SchedulerAction, interfac
 	return *newInstance
 }
 
-func (a *AsyncAction) Schedule(state interface{}, delay float64) SubscriptionLike {
+func (a *AsyncAction) Schedule(state interface{}, delay uint) SubscriptionLike {
 	if a.closed {
 		return a
 	}
@@ -28,9 +28,13 @@ func (a *AsyncAction) Schedule(state interface{}, delay float64) SubscriptionLik
 	id := a.id
 	scheduler := a.scheduler
 
-	if id != nil {
+	if _, ok := id.(struct{}); ok {
 		a.id = a.recycleAsyncId(scheduler, id, delay)
 	}
+
+	//if id != nil {
+	//	a.id = a.recycleAsyncId(scheduler, id, delay)
+	//}
 
 	a.pending = true
 	a.delay = delay
@@ -42,36 +46,51 @@ func (a *AsyncAction) Schedule(state interface{}, delay float64) SubscriptionLik
 	return a
 }
 
-func (a *AsyncAction) requestAsyncId(scheduler SchedulerLike, id interface{}, delay float64) interface{} {
+func (a *AsyncAction) requestAsyncId(scheduler SchedulerLike, id interface{}, delay uint) interface{} {
 	// Why not using time.After? See implementation of AsyncAction in RxJs
+	asyncScheduler := scheduler.(*AsyncScheduler)
 	t := time.NewTicker(time.Duration(delay) * time.Millisecond)
+	done := make(chan bool)
 	go func() {
-		for range t.C {
-			asyncScheduler := scheduler.(*AsyncScheduler)
-			asyncScheduler.flush(*a)
+		for {
+			select {
+			case <-done:
+				return
+			case <-t.C:
+				asyncScheduler.flush(a)
+			}
+
 		}
 	}()
 
-	return t
+	return struct {
+		t    *time.Ticker
+		done chan bool
+	}{t, done}
 }
 
-func (a *AsyncAction) recycleAsyncId(scheduler SchedulerLike, id interface{}, delay float64) interface{} {
+func (a *AsyncAction) recycleAsyncId(scheduler SchedulerLike, id interface{}, delay uint) interface{} {
 	if a.delay == delay && a.pending == false {
 		return id
 	}
 
-	ticker := id.(*time.Ticker)
-	ticker.Stop()
+	td := id.(struct {
+		t    *time.Ticker
+		done chan bool
+	})
+
+	td.t.Stop()
+	td.done <- true
 
 	return nil
 }
 
-func (a *AsyncAction) _execute(state interface{}, delay float64) interface{} {
+func (a *AsyncAction) _execute(state interface{}, delay uint) interface{} {
 	a.work(a, state)
 	return nil
 }
 
-func (a *AsyncAction) execute(state interface{}, delay float64) interface{} {
+func (a *AsyncAction) execute(state interface{}, delay uint) interface{} {
 	if a.closed {
 		panic("executing a cancelled action")
 	}
@@ -89,6 +108,6 @@ func (a *AsyncAction) execute(state interface{}, delay float64) interface{} {
 
 func (a *AsyncAction) Unsubscribe() {
 	if a.id != nil {
-		a.id = a.recycleAsyncId(a.scheduler, a.id, -1)
+		a.id = a.recycleAsyncId(a.scheduler, a.id, 0)
 	}
 }

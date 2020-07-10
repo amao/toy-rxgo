@@ -18,7 +18,7 @@ func (s *Scheduler) Now() time.Time {
 	return s.now()
 }
 
-func (s *Scheduler) Schedule(scheduler SchedulerLike, work func(SchedulerAction, interface{}), delay float64, state interface{}) SubscriptionLike {
+func (s *Scheduler) Schedule(scheduler SchedulerLike, work func(SchedulerAction, interface{}), delay uint, state interface{}) SubscriptionLike {
 	switch s.schedulerAction {
 	case "AsyncAction":
 		action := NewAsyncAction(scheduler, work)

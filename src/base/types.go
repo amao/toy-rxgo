@@ -13,14 +13,14 @@ type SubscriptionLike interface {
 	Unsubscribable
 	Closed() bool
 	Add(SubscriptionLike) Unsubscribable
-	Remove(subscription SubscriptionLike)
+	Remove(SubscriptionLike)
 }
 
 type SubscriberLike interface {
 	Unsubscribable
 	Closed() bool
 	Add(SubscriptionLike) Unsubscribable
-	Remove(subscription SubscriptionLike)
+	Remove(SubscriptionLike)
 	Observer
 }
 
@@ -46,7 +46,7 @@ type OuterSubscriberLike interface {
 
 type SchedulerAction interface {
 	SubscriptionLike
-	Schedule(state interface{}, delay float64) SubscriptionLike
+	Schedule(state interface{}, delay uint) SubscriptionLike
 }
 
 type TimestampProvider interface {
@@ -55,5 +55,5 @@ type TimestampProvider interface {
 
 type SchedulerLike interface {
 	TimestampProvider
-	Schedule(scheduler SchedulerLike, work func(SchedulerAction, interface{}), delay float64, state interface{}) SubscriptionLike
+	Schedule(scheduler SchedulerLike, work func(SchedulerAction, interface{}), delay uint, state interface{}) SubscriptionLike
 }

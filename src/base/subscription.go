@@ -25,12 +25,22 @@ func (s *Subscription) Closed() bool {
 }
 
 func (s *Subscription) Add(teardown SubscriptionLike) Unsubscribable {
+	if subscription, ok := teardown.(*Subscription); ok {
+		if reflect.DeepEqual(subscription, s) || subscription.closed {
+			return teardown
+		} else if s.closed {
+			teardown.Unsubscribe()
+			return teardown
+		}
+	}
 
-	if reflect.DeepEqual(teardown, s) || teardown.Closed() {
-		return teardown
-	} else if s.Closed() {
-		teardown.Unsubscribe()
-		return teardown
+	if subscriber, ok := teardown.(*Subscriber); ok {
+		if reflect.DeepEqual(subscriber.Subscription, s) || subscriber.closed {
+			return teardown
+		} else if s.closed {
+			teardown.Unsubscribe()
+			return teardown
+		}
 	}
 
 	if s.subscriptions == nil {
