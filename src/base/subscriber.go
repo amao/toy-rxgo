@@ -2,27 +2,32 @@ package base
 
 type Subscriber struct {
 	Destination SubscriberLike
+	super       *Subscription
 	*Subscription
 	IsStopped bool
+	_next     func(interface{})
+	_error    func(err error)
+	_complete func()
 }
 
 func NewSubscriber(args ...interface{}) Subscriber {
 	newInstance := new(Subscriber)
 	newInstance.Subscription = new(Subscription)
+	newInstance.super = new(Subscription)
 	switch len(args) {
 	case 0:
-		emptyO := NewEmptyObserver()
-		newInstance.Destination = emptyO
+		emptyObserver := NewEmptyObserver()
+		newInstance.Destination = emptyObserver
 	case 1:
 		if obv, ok := args[0].(SubscriberLike); ok {
 			newInstance.Destination = obv
-			obv.Add(newInstance)
+			// New sub struct needs to be added Subscription of Desination
 		} else if nextFn, ok := args[0].(func(interface{})); ok {
 			safeSub := newSafeSubscriber(*newInstance, nextFn, nil, nil)
 			newInstance.Destination = safeSub
 		} else {
-			emptyO := NewEmptyObserver()
-			newInstance.Destination = emptyO
+			emptyObserver := NewEmptyObserver()
+			newInstance.Destination = emptyObserver
 		}
 	case 2:
 		if nextFn, ok := args[0].(func(interface{})); ok {
@@ -51,40 +56,52 @@ func NewSubscriber(args ...interface{}) Subscriber {
 		newInstance.Destination = safeSub
 	}
 
+	newInstance._next = func(value interface{}) {
+		newInstance.Destination.Next(value)
+	}
+
+	newInstance._error = func(err error) {
+		newInstance.Destination.Error(err)
+		newInstance.Unsubscribe()
+	}
+
+	newInstance._complete = func() {
+		newInstance.Destination.Complete()
+		newInstance.Unsubscribe()
+	}
+
 	return *newInstance
 }
 
-func (s *Subscriber) _Next(value interface{}) {
-	s.Destination.Next(value)
+func (s *Subscriber) SetInnerNext(_next func(interface{})) {
+	s._next = _next
 }
 
-func (s *Subscriber) _Error(err error) {
-	s.Destination.Error(err)
-	s.Unsubscribe()
+func (s *Subscriber) SetInnerError(_error func(error)) {
+	s._error = _error
 }
 
-func (s *Subscriber) _Complete() {
-	s.Destination.Complete()
-	s.Unsubscribe()
+func (s *Subscriber) SetInnerComplete(_complete func()) {
+	s._complete = _complete
 }
 
 func (s *Subscriber) Next(value interface{}) {
 	if !s.IsStopped {
-		s._Next(value)
+		s._next(value)
 	}
 }
 
 func (s *Subscriber) Error(err error) {
 	if !s.IsStopped {
 		s.IsStopped = true
-		s._Error(err)
+		s._error(err)
 	}
 }
 
 func (s *Subscriber) Complete() {
 	if !s.IsStopped {
 		s.IsStopped = true
-		s._Complete()
+		s._complete()
 	}
 }
 
@@ -98,32 +115,34 @@ func (s *Subscriber) Unsubscribe() {
 	}
 
 	s.IsStopped = true
-	s.Subscription.Unsubscribe()
+	s.super.Unsubscribe()
 }
 
 type safeSubscriber struct {
 	*Subscriber
-	parent   *Subscriber
-	next     func(value interface{})
-	err      func(e error)
-	complete func()
+	super     *Subscriber
+	parent    *Subscriber
+	IsStopped bool
+	closed    bool
 }
 
 func newSafeSubscriber(parent Subscriber, next func(value interface{}), err func(e error), complete func()) SubscriberLike {
 	newInstance := new(safeSubscriber)
+	self := NewSubscriber()
 	super := NewSubscriber()
-	newInstance.Subscriber = &super
+	newInstance.Subscriber = &self
+	newInstance.super = &super
 	newInstance.parent = &parent
-	newInstance.next = next
+	newInstance._next = next
 	if err != nil {
-		newInstance.err = err
+		newInstance._error = err
 	} else {
-		newInstance.err = func(err error) {}
+		newInstance._error = func(err error) {}
 	}
 	if complete != nil {
-		newInstance.complete = complete
+		newInstance._complete = complete
 	} else {
-		newInstance.complete = func() {}
+		newInstance._complete = func() {}
 	}
 
 	return newInstance
@@ -131,25 +150,25 @@ func newSafeSubscriber(parent Subscriber, next func(value interface{}), err func
 }
 
 func (s *safeSubscriber) Next(value interface{}) {
-	if !s.Subscriber.IsStopped {
-		s.next(value)
+	if !s.IsStopped {
+		s._next(value)
 	}
 }
 
 func (s *safeSubscriber) Error(err error) {
-	if !s.Subscriber.IsStopped {
-		s.err(err)
+	if !s.IsStopped {
+		s._error(err)
 	}
 }
 
 func (s *safeSubscriber) Complete() {
-	if !s.Subscriber.IsStopped {
-		s.complete()
+	if !s.IsStopped {
+		s._complete()
 	}
 }
 
 func (s *safeSubscriber) Closed() bool {
-	return s.Closed()
+	return s.closed
 }
 
 func (s *safeSubscriber) Unsubscribe() {

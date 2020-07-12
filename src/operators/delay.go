@@ -1,6 +1,7 @@
 package operators
 
 import (
+	"sync/atomic"
 	"time"
 
 	"github.com/amao/toy-rxgo/src/base"
@@ -12,6 +13,7 @@ type message struct {
 }
 
 type delaySubscriber struct {
+	super *base.Subscriber
 	*base.Subscriber
 	delay float64
 	queue []message
@@ -19,31 +21,47 @@ type delaySubscriber struct {
 
 func newDelaySubscriber(destination base.SubscriberLike, delay float64) delaySubscriber {
 	newInstance := new(delaySubscriber)
-	s := base.NewSubscriber(destination.Next, destination.Error, destination.Complete)
-	newInstance.Subscriber = &s
+	super := base.NewSubscriber(destination)
+	self := base.NewSubscriber(destination)
+	newInstance.Subscriber = &self
+	newInstance.super = &super
+	newInstance.Destination.Add(newInstance)
 	newInstance.delay = delay
-	return *newInstance
-}
-
-func (d *delaySubscriber) Next(value interface{}) {
-	d.queue = append(d.queue, message{
-		time:  time.Now(),
-		value: value,
+	var jobIsRunning uint32
+	newInstance.SetInnerNext(func(value interface{}) {
+		newInstance.queue = append(newInstance.queue, message{
+			time:  time.Now(),
+			value: value,
+		})
+		if atomic.CompareAndSwapUint32(&jobIsRunning, 0, 1) {
+			go func() {
+				for {
+					for len(newInstance.queue) > 0 && float64(time.Now().UnixNano()/1e6-newInstance.queue[0].time.UnixNano()/1e6) >= newInstance.delay {
+						newInstance.Destination.Next(newInstance.queue[0].value)
+						newInstance.queue = newInstance.queue[1:]
+					}
+					if len(newInstance.queue) > 0 {
+						continue
+					}
+					break
+				}
+				newInstance.Complete()
+				atomic.StoreUint32(&jobIsRunning, 0)
+			}()
+		}
 	})
-	for len(d.queue) > 0 && float64(time.Now().Sub(d.queue[0].time).Milliseconds()) >= d.delay {
-		d.Destination.Next(d.queue[0].value)
-		d.queue = d.queue[1:]
-	}
-}
-
-func (d *delaySubscriber) Error(err error) {
-	d.Destination.Error(err)
-	d.Subscriber.Unsubscribe()
-}
-
-func (d *delaySubscriber) Complete() {
-	d.Destination.Complete()
-	d.Subscriber.Unsubscribe()
+	newInstance.SetInnerError(func(err error) {
+		newInstance.Destination.Error(err)
+		newInstance.Unsubscribe()
+	})
+	newInstance.SetInnerComplete(func() {
+		go func() {
+			time.Sleep(time.Duration(newInstance.delay) * time.Millisecond)
+			newInstance.Destination.Complete()
+			newInstance.Unsubscribe()
+		}()
+	})
+	return *newInstance
 }
 
 type delayOperator struct {
@@ -58,8 +76,7 @@ func newDelayOperator(delay float64) delayOperator {
 
 func (d *delayOperator) Call(subscriber base.SubscriberLike, source base.Observable) base.SubscriptionLike {
 	nds := newDelaySubscriber(subscriber, d.delay)
-	time.Sleep(time.Duration(d.delay) * time.Millisecond)
-	return source.Subscribe(nds.Next, nds.Error, nds.Complete)
+	return source.Subscribe(nds)
 }
 
 func Delay(delay float64, args ...interface{}) base.OperatorFunction {

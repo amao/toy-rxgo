@@ -16,34 +16,28 @@ type mergeMapSubscriberV2 struct {
 
 func newMergeMapSubscriberV2(destination base.SubscriberLike, project func(interface{}) base.Subscribable, concurrent int) mergeMapSubscriberV2 {
 	newInstance := new(mergeMapSubscriberV2)
-	subscriber := base.NewSubscriber(destination)
-	outerSubscriber := base.NewOuterSubscriber()
-	outerSubscriber.Subscriber = &subscriber
-	newInstance.OuterSubscriber = &outerSubscriber
+	self := base.NewSubscriber(destination)
+	super := new(base.OuterSubscriber)
+	newInstance.OuterSubscriber = super
+	newInstance.Subscriber = &self
+	newInstance.Destination.Add(newInstance)
 	newInstance.project = project
 	newInstance.concurrent = concurrent
+	newInstance.SetInnerNext(func(value interface{}) {
+		if newInstance.active < newInstance.concurrent {
+			newInstance._tryNext(value)
+		} else {
+			newInstance.buffer = append(newInstance.buffer, value)
+		}
+	})
+	newInstance.SetInnerComplete(func() {
+		newInstance.hasCompleted = true
+		if newInstance.active == 0 && len(newInstance.buffer) == 0 {
+			newInstance.Destination.Complete()
+		}
+		newInstance.Unsubscribe()
+	})
 	return *newInstance
-}
-
-func (m *mergeMapSubscriberV2) Next(value interface{}) {
-	if m.active < m.concurrent {
-		m._tryNext(value)
-	} else {
-		m.buffer = append(m.buffer, value)
-	}
-}
-
-func (m *mergeMapSubscriberV2) Error(err error) {
-	m.Destination.Error(err)
-
-}
-
-func (m *mergeMapSubscriberV2) Complete() {
-	m.hasCompleted = true
-	if m.active == 0 && len(m.buffer) == 0 {
-		m.Destination.Complete()
-	}
-	m.Unsubscribe()
 }
 
 func (m *mergeMapSubscriberV2) _tryNext(value interface{}) {
@@ -55,7 +49,7 @@ func (m *mergeMapSubscriberV2) _tryNext(value interface{}) {
 
 func (m *mergeMapSubscriberV2) _innerSub(ish base.Subscribable, value interface{}) {
 	innerSubscriber := base.NewInnerSubscriber(m)
-	destination := m.Subscription
+	destination := m.Destination
 	destination.Add(innerSubscriber)
 
 	if innerSubscriber.Closed() {
