@@ -5,55 +5,74 @@ import (
 )
 
 type switchMapSubscriber struct {
-	parent            base.Subscriber
-	fn                func(interface{}) base.Subscribable
+	*base.OuterSubscriber
+	super             *base.OuterSubscriber
+	project           func(interface{}) base.Subscribable
 	innerSubscription base.SubscriptionLike
-	index             int
 }
 
-func newSwitchMapSubscriber(subscriber base.SubscriberLike, fn func(interface{}) base.Subscribable) switchMapSubscriber {
+func newSwitchMapSubscriber(destination base.SubscriberLike, project func(interface{}) base.Subscribable) switchMapSubscriber {
 	newInstance := new(switchMapSubscriber)
-	newInstance.index = 1
-	newInstance.parent = base.NewSubscriber(subscriber)
-	newInstance.fn = fn
-	sp := base.NewSubscription(nil)
-	newInstance.innerSubscription = &sp
-	subscriber.Add(newInstance.innerSubscription)
+
+	selfSubscriber := base.NewSubscriber(destination)
+	selfOuterSubscriber := new(base.OuterSubscriber)
+	newInstance.OuterSubscriber = selfOuterSubscriber
+	newInstance.Subscriber = &selfSubscriber
+	newInstance.Destination.Add(newInstance)
+
+	superSubscriber := base.NewSubscriber(destination)
+	superOuterSubscriber := new(base.OuterSubscriber)
+	newInstance.super = superOuterSubscriber
+	newInstance.super.Subscriber = &superSubscriber
+
+	newInstance.project = project
+	//sp := base.NewSubscription(nil)
+	//newInstance.innerSubscription = &sp
+	//destination.Add(newInstance.innerSubscription)
+
+	newInstance.SetInnerNext(func(value interface{}) {
+		result := newInstance.project(value)
+		newInstance._innerSub(result, value)
+	})
+	newInstance.SetInnerComplete(func() {
+		if newInstance.innerSubscription == nil || newInstance.innerSubscription.Closed() {
+			newInstance.super.CallInnerComplete()
+		}
+		newInstance.Unsubscribe()
+	})
+	newInstance.SetInnerUnsubscribe(func() {
+		newInstance.innerSubscription = nil
+	})
 	return *newInstance
 }
 
-func (s *switchMapSubscriber) Next(value interface{}) {
-	innerObservable := s.fn(value)
-	s.index++
+func (s *switchMapSubscriber) _innerSub(result base.Subscribable, value interface{}) {
 
 	if s.innerSubscription != nil {
 		s.innerSubscription.Unsubscribe()
 	}
 
-	s.innerSubscription = innerObservable.Subscribe(
-		func(value interface{}) {
-			s.parent.Next(value)
-		},
-		func(err error) {
-			s.parent.Error(err)
-		},
-		func() {
-			s.index--
-			if s.index <= 0 {
-				s.parent.Complete()
-			}
-		},
-	)
+	innerSubscriber := base.NewInnerSubscriber(s)
+	//destination := s.Destination
+	//destination.Add(innerSubscriber)
+
+	if innerSubscriber.Closed() {
+		return
+	}
+
+	s.innerSubscription = result.Subscribe(&innerSubscriber)
 }
 
-func (s *switchMapSubscriber) Error(err error) {
-	s.parent.Error(err)
+func (s *switchMapSubscriber) NotifyNext(innerValue interface{}) {
+	s.Destination.Next(innerValue)
 }
 
-func (s *switchMapSubscriber) Complete() {
-	s.index = s.index - 1
-	if s.index <= 0 {
-		s.parent.Complete()
+func (s *switchMapSubscriber) NotifComplete(innerSub base.InnerSubscriber) {
+	destination := s.Destination
+	destination.Remove(innerSub)
+	s.innerSubscription = nil
+	if s.IsStopped {
+		s.super.CallInnerComplete()
 	}
 }
 
@@ -69,7 +88,7 @@ func newSwitchMapOperator(project func(interface{}) base.Subscribable) switchMap
 
 func (s *switchMapOperator) Call(subscriber base.SubscriberLike, source base.Observable) base.SubscriptionLike {
 	nsms := newSwitchMapSubscriber(subscriber, s.project)
-	return source.Subscribe(nsms.Next, nsms.Error, nsms.Complete)
+	return source.Subscribe(nsms)
 }
 
 func SwitchMap(fn func(interface{}) base.Subscribable) base.OperatorFunction {

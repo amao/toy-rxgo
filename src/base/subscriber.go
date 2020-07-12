@@ -85,6 +85,10 @@ func (s *Subscriber) SetInnerComplete(_complete func()) {
 	s._complete = _complete
 }
 
+func (s *Subscriber) CallInnerComplete() {
+	s._complete()
+}
+
 func (s *Subscriber) Next(value interface{}) {
 	if !s.IsStopped {
 		s._next(value)

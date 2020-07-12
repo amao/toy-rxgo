@@ -10,19 +10,16 @@ func NewInnerSubscriber(parent OuterSubscriberLike) InnerSubscriber {
 	parentSubscriber := NewSubscriber()
 	newInstance.Subscriber = &parentSubscriber
 	newInstance.parent = parent
+	newInstance.SetInnerNext(func(value interface{}) {
+		newInstance.parent.NotifyNext(value)
+	})
+	newInstance.SetInnerError(func(err error) {
+		newInstance.parent.NotifyError(err)
+		newInstance.Unsubscribe()
+	})
+	newInstance.SetInnerComplete(func() {
+		newInstance.parent.NotifComplete(*newInstance)
+		newInstance.Unsubscribe()
+	})
 	return *newInstance
-}
-
-func (i *InnerSubscriber) Next(value interface{}) {
-	i.parent.NotifyNext(value)
-}
-
-func (i *InnerSubscriber) Error(err error) {
-	i.parent.NotifyError(err)
-	i.Unsubscribe()
-}
-
-func (i *InnerSubscriber) Complete() {
-	i.parent.NotifComplete(*i)
-	i.Unsubscribe()
 }

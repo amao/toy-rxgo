@@ -8,16 +8,20 @@ type Subscription struct {
 	closed          bool //default value = false
 	parentOrParents interface{}
 	subscriptions   []Unsubscribable
-	unsubscribe     func()
+	_unsubscribe    func()
 }
 
 func NewSubscription(unsubscribe interface{}) Subscription {
 	newInstance := new(Subscription)
 	if unsubscribe != nil {
-		newInstance.unsubscribe = unsubscribe.(func())
+		newInstance._unsubscribe = unsubscribe.(func())
 		newInstance.closed = false
 	}
 	return *newInstance
+}
+
+func (s *Subscription) SetInnerUnsubscribe(innerUnsubscribe func()) {
+	s._unsubscribe = innerUnsubscribe
 }
 
 func (s *Subscription) Closed() bool {
@@ -83,8 +87,8 @@ func (s *Subscription) Unsubscribe() {
 
 	s.closed = true
 
-	if s.unsubscribe != nil {
-		s.unsubscribe()
+	if s._unsubscribe != nil {
+		s._unsubscribe()
 	}
 
 	for _, sub := range s.subscriptions {
