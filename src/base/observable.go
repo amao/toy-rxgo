@@ -58,6 +58,10 @@ func toSubscriber(args ...interface{}) SubscriberLike {
 		result := NewSubscriber()
 		return &result
 	case 1:
+		if realType, ok := args[0].(func(interface{})); ok {
+			result := NewSubscriber(realType)
+			return &result
+		}
 		result := args[0].(SubscriberLike)
 		return result
 	default:

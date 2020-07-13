@@ -21,7 +21,7 @@ func NewSubscriber(args ...interface{}) Subscriber {
 	case 1:
 		if obv, ok := args[0].(SubscriberLike); ok {
 			newInstance.Destination = obv
-			// New sub struct needs to be added Subscription of Desination
+			// New sub struct needs to be added Subscription of Destination
 		} else if nextFn, ok := args[0].(func(interface{})); ok {
 			safeSub := newSafeSubscriber(*newInstance, nextFn, nil, nil)
 			newInstance.Destination = safeSub
@@ -153,6 +153,12 @@ func newSafeSubscriber(parent Subscriber, next func(value interface{}), err func
 		newInstance._complete = func() {}
 	}
 
+	newInstance.SetInnerUnsubscribe(func() {
+		if newInstance.parent != nil {
+			newInstance.parent.Unsubscribe()
+		}
+	})
+
 	return newInstance
 
 }
@@ -166,19 +172,17 @@ func (s *safeSubscriber) Next(value interface{}) {
 func (s *safeSubscriber) Error(err error) {
 	if !s.IsStopped {
 		s._error(err)
+		s.Unsubscribe()
 	}
 }
 
 func (s *safeSubscriber) Complete() {
 	if !s.IsStopped {
 		s._complete()
+		s.Unsubscribe()
 	}
 }
 
 func (s *safeSubscriber) Closed() bool {
 	return s.closed
-}
-
-func (s *safeSubscriber) Unsubscribe() {
-	s.Subscriber.Unsubscribe()
 }
