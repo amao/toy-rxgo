@@ -67,7 +67,7 @@ func (s *switchMapSubscriber) NotifyNext(innerValue interface{}) {
 	s.Destination.Next(innerValue)
 }
 
-func (s *switchMapSubscriber) NotifComplete(innerSub base.InnerSubscriber) {
+func (s *switchMapSubscriber) NotifyComplete(innerSub base.InnerSubscriber) {
 	destination := s.Destination
 	destination.Remove(innerSub)
 	s.innerSubscription = nil

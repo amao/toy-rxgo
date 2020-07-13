@@ -41,7 +41,7 @@ type Subscribable interface {
 type OuterSubscriberLike interface {
 	NotifyNext(interface{})
 	NotifyError(error)
-	NotifComplete(innerSub InnerSubscriber)
+	NotifyComplete(innerSub InnerSubscriber)
 }
 
 type SchedulerAction interface {

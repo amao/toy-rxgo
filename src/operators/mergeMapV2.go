@@ -2,6 +2,7 @@ package operators
 
 import (
 	"github.com/amao/toy-rxgo/src/base"
+	"math"
 )
 
 type mergeMapSubscriberV2 struct {
@@ -67,13 +68,12 @@ func (m *mergeMapSubscriberV2) NotifyError(err error) {
 	m.Destination.Error(err)
 }
 
-func (m *mergeMapSubscriberV2) NotifComplete(innerSub base.InnerSubscriber) {
-	buffer := m.buffer
+func (m *mergeMapSubscriberV2) NotifyComplete(innerSub base.InnerSubscriber) {
 	m.Remove(innerSub)
 	m.active--
-	if len(buffer) > 0 {
-		m.Next(buffer[0])
-		buffer = buffer[1:]
+	if len(m.buffer) > 0 {
+		m.CallInnerNext(m.buffer[0])
+		m.buffer = m.buffer[1:]
 	} else if m.active == 0 && m.hasCompleted {
 		m.Destination.Complete()
 	}
@@ -96,9 +96,16 @@ func (m *mergeMapOperatorV2) Call(subscriber base.SubscriberLike, source base.Ob
 	return source.Subscribe(&nmmsv2)
 }
 
-func MergeMapV2(project func(value interface{}) base.Subscribable) base.OperatorFunction {
+func MergeMapV2(project func(value interface{}) base.Subscribable, concurrent ...interface{}) base.OperatorFunction {
+	concurrentN := math.MaxUint32
+	if len(concurrent) == 1 {
+		if value, ok := concurrent[0].(int); ok {
+			concurrentN = value
+		}
+	}
+
 	return func(source base.Observable) base.Observable {
-		op := newMergeMapOperatorV2(project, 99999)
+		op := newMergeMapOperatorV2(project, concurrentN)
 		ob := source.Lift(&op)
 		return ob
 	}

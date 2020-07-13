@@ -19,6 +19,6 @@ func (o *OuterSubscriber) NotifyError(err error) {
 	o.Destination.Error(err)
 }
 
-func (o *OuterSubscriber) NotifComplete(innerSub InnerSubscriber) {
+func (o *OuterSubscriber) NotifyComplete(innerSub InnerSubscriber) {
 	o.Destination.Complete()
 }

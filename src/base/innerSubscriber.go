@@ -18,7 +18,7 @@ func NewInnerSubscriber(parent OuterSubscriberLike) InnerSubscriber {
 		newInstance.Unsubscribe()
 	})
 	newInstance.SetInnerComplete(func() {
-		newInstance.parent.NotifComplete(*newInstance)
+		newInstance.parent.NotifyComplete(*newInstance)
 		newInstance.Unsubscribe()
 	})
 	return *newInstance
