@@ -2,14 +2,14 @@ package base
 
 type Observable struct {
 	subscribe func(SubscriberLike) SubscriptionLike
-	source    *Observable
+	source    Subscribable
 	operator  Operator
 }
 
-func NewObservable(subscribe func(SubscriberLike) SubscriptionLike) Observable {
+func NewObservable(subscribe interface{}) Observable {
 	observable := new(Observable)
 	if subscribe != nil {
-		observable.subscribe = subscribe
+		observable.subscribe = subscribe.(func(SubscriberLike) SubscriptionLike)
 	}
 	return *observable
 }
@@ -42,7 +42,7 @@ func (o *Observable) Subscribe(args ...interface{}) SubscriptionLike {
 	var subscription SubscriptionLike
 
 	if operator != nil {
-		subscription = operator.Call(sink, *o.source)
+		subscription = operator.Call(sink, o.source)
 	} else {
 		subscription = o.subscribe(sink)
 	}

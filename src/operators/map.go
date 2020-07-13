@@ -56,7 +56,7 @@ func newMapOperator(project func(interface{}) interface{}) mapOperator {
 	return newInstance
 }
 
-func (m mapOperator) Call(subscriber base.SubscriberLike, source base.Observable) base.SubscriptionLike {
+func (m mapOperator) Call(subscriber base.SubscriberLike, source base.Subscribable) base.SubscriptionLike {
 	nms := newMapSubscriber(subscriber, m.project)
 	return source.Subscribe(nms.Next, nms.Error, nms.Complete)
 }

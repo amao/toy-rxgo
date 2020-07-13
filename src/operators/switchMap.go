@@ -86,7 +86,7 @@ func newSwitchMapOperator(project func(interface{}) base.Subscribable) switchMap
 	return *newInstance
 }
 
-func (s *switchMapOperator) Call(subscriber base.SubscriberLike, source base.Observable) base.SubscriptionLike {
+func (s *switchMapOperator) Call(subscriber base.SubscriberLike, source base.Subscribable) base.SubscriptionLike {
 	nsms := newSwitchMapSubscriber(subscriber, s.project)
 	return source.Subscribe(nsms)
 }

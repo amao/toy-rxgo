@@ -74,7 +74,7 @@ func newDelayOperator(delay float64) delayOperator {
 	return *newInstance
 }
 
-func (d *delayOperator) Call(subscriber base.SubscriberLike, source base.Observable) base.SubscriptionLike {
+func (d *delayOperator) Call(subscriber base.SubscriberLike, source base.Subscribable) base.SubscriptionLike {
 	nds := newDelaySubscriber(subscriber, d.delay)
 	return source.Subscribe(nds)
 }

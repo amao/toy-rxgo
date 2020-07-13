@@ -61,7 +61,7 @@ func newMergeMapOperator(project func(interface{}) base.Subscribable) mergeMapOp
 	return *newInstance
 }
 
-func (m *mergeMapOperator) Call(subscriber base.SubscriberLike, source base.Observable) base.SubscriptionLike {
+func (m *mergeMapOperator) Call(subscriber base.SubscriberLike, source base.Subscribable) base.SubscriptionLike {
 	nmms := newMergeMapSubscriber(subscriber, m.project)
 	result := base.NewSubscriber(nmms.Next, nmms.Error, nmms.Complete)
 	result.Subscription = nmms.Subscriber.Subscription

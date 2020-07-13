@@ -39,7 +39,7 @@ func newTakeOperator(count uint) takeOperator {
 	return *newInstance
 }
 
-func (t *takeOperator) Call(subscriber base.SubscriberLike, source base.Observable) base.SubscriptionLike {
+func (t *takeOperator) Call(subscriber base.SubscriberLike, source base.Subscribable) base.SubscriptionLike {
 	nts := newTakeSubscriber(subscriber, t.count)
 	return source.Subscribe(&nts)
 }

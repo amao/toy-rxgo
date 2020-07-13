@@ -31,7 +31,7 @@ type Observer interface {
 }
 
 type Operator interface {
-	Call(subscriber SubscriberLike, source Observable) SubscriptionLike
+	Call(subscriber SubscriberLike, source Subscribable) SubscriptionLike
 }
 
 type Subscribable interface {

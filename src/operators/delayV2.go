@@ -120,7 +120,7 @@ func newDelayOperatorV2(delay uint, scheduler base.SchedulerLike) delayOperatorV
 	return *newInstance
 }
 
-func (d *delayOperatorV2) Call(subscriber base.SubscriberLike, source base.Observable) base.SubscriptionLike {
+func (d *delayOperatorV2) Call(subscriber base.SubscriberLike, source base.Subscribable) base.SubscriptionLike {
 	ndsv2 := newDelaySubscriberV2(subscriber, d.delay, d.scheduler)
 	return source.Subscribe(&ndsv2)
 }

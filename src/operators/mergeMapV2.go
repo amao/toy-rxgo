@@ -1,8 +1,9 @@
 package operators
 
 import (
-	"github.com/amao/toy-rxgo/src/base"
 	"math"
+
+	"github.com/amao/toy-rxgo/src/base"
 )
 
 type mergeMapSubscriberV2 struct {
@@ -91,7 +92,7 @@ func newMergeMapOperatorV2(project func(value interface{}) base.Subscribable, co
 	return *newInstance
 }
 
-func (m *mergeMapOperatorV2) Call(subscriber base.SubscriberLike, source base.Observable) base.SubscriptionLike {
+func (m *mergeMapOperatorV2) Call(subscriber base.SubscriberLike, source base.Subscribable) base.SubscriptionLike {
 	nmmsv2 := newMergeMapSubscriberV2(subscriber, m.project, m.concurrent)
 	return source.Subscribe(&nmmsv2)
 }
