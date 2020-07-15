@@ -50,7 +50,7 @@ func (m *mergeMapSubscriberV2) _tryNext(value interface{}) {
 }
 
 func (m *mergeMapSubscriberV2) _innerSub(ish base.Subscribable, value interface{}) {
-	innerSubscriber := base.NewInnerSubscriber(m)
+	innerSubscriber := base.NewInnerSubscriber(m, -1, -1)
 	destination := m.Destination
 	destination.Add(innerSubscriber)
 
@@ -61,7 +61,7 @@ func (m *mergeMapSubscriberV2) _innerSub(ish base.Subscribable, value interface{
 	ish.Subscribe(&innerSubscriber)
 }
 
-func (m *mergeMapSubscriberV2) NotifyNext(innerValue interface{}) {
+func (m *mergeMapSubscriberV2) NotifyNext(outerValue interface{}, innerValue interface{}, outerIndex interface{}, innerIndex interface{}, innerSub base.InnerSubscriber) {
 	m.Destination.Next(innerValue)
 }
 

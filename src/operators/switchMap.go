@@ -52,7 +52,7 @@ func (s *switchMapSubscriber) _innerSub(result base.Subscribable, value interfac
 		s.innerSubscription.Unsubscribe()
 	}
 
-	innerSubscriber := base.NewInnerSubscriber(s)
+	innerSubscriber := base.NewInnerSubscriber(s, -1, -1)
 	//destination := s.Destination
 	//destination.Add(innerSubscriber)
 
@@ -63,7 +63,7 @@ func (s *switchMapSubscriber) _innerSub(result base.Subscribable, value interfac
 	s.innerSubscription = result.Subscribe(&innerSubscriber)
 }
 
-func (s *switchMapSubscriber) NotifyNext(innerValue interface{}) {
+func (s *switchMapSubscriber) NotifyNext(outerValue interface{}, innerValue interface{}, outerIndex interface{}, innerIndex interface{}, innerSub base.InnerSubscriber) {
 	s.Destination.Next(innerValue)
 }
 

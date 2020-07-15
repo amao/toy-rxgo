@@ -39,7 +39,7 @@ type Subscribable interface {
 }
 
 type OuterSubscriberLike interface {
-	NotifyNext(interface{})
+	NotifyNext(interface{}, interface{}, interface{}, interface{}, InnerSubscriber)
 	NotifyError(error)
 	NotifyComplete(innerSub InnerSubscriber)
 }

@@ -11,7 +11,7 @@ func NewOuterSubscriber() OuterSubscriber {
 	return *newInstance
 }
 
-func (o *OuterSubscriber) NotifyNext(innerValue interface{}) {
+func (o *OuterSubscriber) NotifyNext(outerValue interface{}, innerValue interface{}, outerIndex interface{}, innerIndex interface{}, innerSub InnerSubscriber) {
 	o.Destination.Next(innerValue)
 }
 

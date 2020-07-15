@@ -21,13 +21,13 @@ func newBufferSubscriber(destination base.SubscriberLike, closingNotifier base.S
 	newInstance.SetInnerNext(func(value interface{}) {
 		newInstance.buffer = append(newInstance.buffer, value)
 	})
-	innerSubscriber := base.NewInnerSubscriber(newInstance)
+	innerSubscriber := base.NewInnerSubscriber(newInstance, nil, nil)
 	newInstance.Add(closingNotifier.Subscribe(innerSubscriber))
 
 	return *newInstance
 }
 
-func (b *bufferSubscriber) NotifyNext(innerValue interface{}) {
+func (b *bufferSubscriber) NotifyNext(outerValue interface{}, innerValue interface{}, outerIndex interface{}, innerIndex interface{}, innerSub base.InnerSubscriber) {
 	buffer := b.buffer
 	b.buffer = nil
 	b.Destination.Next(buffer)
