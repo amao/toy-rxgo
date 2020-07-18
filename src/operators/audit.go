@@ -20,6 +20,7 @@ func newAuditSubscriber(destination base.SubscriberLike, durationSelector func(i
 	self := base.NewOuterSubscriber()
 	self.Subscriber = &subscriber
 	newInstance.OuterSubscriber = &self
+	newInstance.Destination.Add(newInstance)
 
 	newInstance.durationSelector = durationSelector
 
